@@ -1,0 +1,321 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "Dashboard" %}{% endblock %}
+
+{% block page_title %}{% trans "Dashboard" %}{% endblock %}
+
+{% block content %}
+
+<!-- Statistics Cards -->
+<div class="stats-grid">
+            <!-- Total Users -->
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-header">
+                        <span class="stat-label">{% trans "Total Users" %}</span>
+                        <div class="stat-icon stat-icon-blue">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">
+                        {% if role == 'ADMIN' or role == 'MANAGER' %}
+                            {{ total_students|default:0|add:total_teachers|default:0 }}
+                        {% elif role == 'TEACHER' %}
+                            {{ my_students_count|default:0 }}
+                        {% elif role == 'STUDENT' %}
+                            {{ present_days|default:0 }}
+                        {% endif %}
+                    </div>
+                    <div class="stat-footer">
+                        <span class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i> +15%
+                        </span>
+                        <span class="stat-subtext">
+                            {% if role == 'STUDENT' %}{% trans "Days present" %}
+                            {% else %}{% trans "New users today" %}: 45{% endif %}
+                        </span>
+                    </div>
+                    <div class="stat-progress">
+                        <div class="progress-bar" style="width: 75%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Users -->
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-header">
+                        <span class="stat-label">{% trans "Active Users" %}</span>
+                        <div class="stat-icon stat-icon-green">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">
+                        {% if role == 'ADMIN' or role == 'MANAGER' %}
+                            {{ total_groups|default:0 }}
+                        {% elif role == 'TEACHER' %}
+                            {{ today_classes_count|default:0 }}
+                        {% elif role == 'STUDENT' %}
+                            {{ absent_days|default:0 }}
+                        {% endif %}
+                    </div>
+                    <div class="stat-footer">
+                        <span class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i> +8%
+                        </span>
+                        <span class="stat-subtext">
+                            {% if role == 'STUDENT' %}{% trans "Days absent" %}
+                            {% elif role == 'TEACHER' %}{% trans "Today's classes" %}
+                            {% else %}{% trans "Active rate" %}: 26%{% endif %}
+                        </span>
+                    </div>
+                    <div class="stat-progress">
+                        <div class="progress-bar progress-green" style="width: 26%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Revenue / Attendance -->
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-header">
+                        <span class="stat-label">
+                            {% if role == 'STUDENT' %}{% trans "Attendance Rate" %}
+                            {% else %}{% trans "Total Subjects" %}{% endif %}
+                        </span>
+                        <div class="stat-icon stat-icon-purple">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">
+                        {% if role == 'STUDENT' %}
+                            {{ attendance_percentage|default:0 }}%
+                        {% elif role == 'TEACHER' %}
+                            {{ my_subjects_count|default:0 }}
+                        {% else %}
+                            {{ total_subjects|default:0 }}
+                        {% endif %}
+                    </div>
+                    <div class="stat-footer">
+                        <span class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i> +10%
+                        </span>
+                        <span class="stat-subtext">
+                            {% trans "Monthly target" %}: 75%
+                        </span>
+                    </div>
+                    <div class="stat-progress">
+                        <div class="progress-bar progress-purple" style="width: {% if role == 'STUDENT' %}{{ attendance_percentage|default:0 }}{% else %}75{% endif %}%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conversion Rate -->
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-header">
+                        <span class="stat-label">{% trans "Completion Rate" %}</span>
+                        <div class="stat-icon stat-icon-orange">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">
+                        {% if role == 'STUDENT' %}
+                            {{ attendance_percentage|default:0 }}%
+                        {% else %}
+                            95.42%
+                        {% endif %}
+                    </div>
+                    <div class="stat-footer">
+                        <span class="stat-change negative">
+                            <i class="fas fa-arrow-down"></i> -2.1%
+                        </span>
+                        <span class="stat-subtext">{% trans "Previous month" %}: 150%</span>
+                    </div>
+                    <div class="stat-progress">
+                        <div class="progress-bar progress-orange" style="width: 95%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="charts-grid">
+            <!-- Revenue Overview -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div>
+                        <h3>{% trans "Attendance Overview" %}</h3>
+                        <p class="chart-subtitle">{% trans "Attendance trend for the last week" %}</p>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+
+            <!-- User Activity -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div>
+                        <h3>{% trans "User Activity" %}</h3>
+                        <p class="chart-subtitle">{% trans "Active and new users for the last week" %}</p>
+                    </div>
+                    <div class="chart-legend">
+                        <span class="legend-item">
+                            <span class="legend-dot legend-blue"></span>
+                            {% trans "Active Users" %}
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-dot legend-cyan"></span>
+                            {% trans "New Users" %}
+                        </span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="userActivityChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Users Table -->
+        <div class="table-card">
+            <div class="table-header">
+                <h3>{% trans "Recent Users" %}</h3>
+                <p class="table-subtitle">{% trans "Latest user registrations and activities" %}</p>
+            </div>
+            <div class="table-container">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>{% trans "User" %}</th>
+                            <th>{% trans "Email" %}</th>
+                            <th>{% trans "Status" %}</th>
+                            <th>{% trans "Deposit" %}</th>
+                            <th>{% trans "Time" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if role == 'ADMIN' or role == 'MANAGER' %}
+                            <!-- Sample data - replace with actual data -->
+                            <tr>
+                                <td>
+                                    <div class="user-cell">
+                                        <div class="user-avatar-table">JD</div>
+                                        <span>John Doe</span>
+                                    </div>
+                                </td>
+                                <td>john@example.com</td>
+                                <td><span class="status-badge status-active">{% trans "active" %}</span></td>
+                                <td>$250</td>
+                                <td>10:30</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="user-cell">
+                                        <div class="user-avatar-table">JS</div>
+                                        <span>Jane Smith</span>
+                                    </div>
+                                </td>
+                                <td>jane@example.com</td>
+                                <td><span class="status-badge status-pending">{% trans "pending" %}</span></td>
+                                <td>—</td>
+                                <td>10:15</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="user-cell">
+                                        <div class="user-avatar-table">RJ</div>
+                                        <span>Robert Johnson</span>
+                                    </div>
+                                </td>
+                                <td>robert@example.com</td>
+                                <td><span class="status-badge status-active">{% trans "active" %}</span></td>
+                                <td>$500</td>
+                                <td>09:45</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="user-cell">
+                                        <div class="user-avatar-table">EW</div>
+                                        <span>Emily Wilson</span>
+                                    </div>
+                                </td>
+                                <td>emily@example.com</td>
+                                <td><span class="status-badge status-blocked">{% trans "blocked" %}</span></td>
+                                <td>—</td>
+                                <td>09:30</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="user-cell">
+                                        <div class="user-avatar-table">MB</div>
+                                        <span>Michael Brown</span>
+                                    </div>
+                                </td>
+                                <td>michael@example.com</td>
+                                <td><span class="status-badge status-active">{% trans "active" %}</span></td>
+                                <td>$1000</td>
+                                <td>09:15</td>
+                            </tr>
+                        {% elif role == 'TEACHER' and today_schedule %}
+                            {% for schedule in today_schedule|slice:":5" %}
+                            <tr>
+                                <td>
+                                    <div class="user-cell">
+                                        <div class="user-avatar-table">
+                                            {{ schedule.group.name|slice:":2"|upper }}
+                                        </div>
+                                        <span>{{ schedule.subject.subject_name }}</span>
+                                    </div>
+                                </td>
+                                <td>{{ schedule.group.name }}</td>
+                                <td><span class="status-badge status-active">{% trans "Scheduled" %}</span></td>
+                                <td>{{ schedule.room|default:"—" }}</td>
+                                <td>{{ schedule.time_slot.start_time|time:"H:i" }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% elif role == 'STUDENT' and student_today_schedule %}
+                            {% for schedule in student_today_schedule|slice:":5" %}
+                            <tr>
+                                <td>
+                                    <div class="user-cell">
+                                        <div class="user-avatar-table">
+                                            {{ schedule.subject.subject_name|slice:":2"|upper }}
+                                        </div>
+                                        <span>{{ schedule.subject.subject_name }}</span>
+                                    </div>
+                                </td>
+                                <td>{{ schedule.teacher.name|default:"—" }}</td>
+                                <td>
+                                    {% if schedule.attendance_status == 'Present' %}
+                                        <span class="status-badge status-active">{% trans "Present" %}</span>
+                                    {% elif schedule.attendance_status == 'Absent' %}
+                                        <span class="status-badge status-blocked">{% trans "Absent" %}</span>
+                                    {% elif schedule.attendance_status == 'Excused' %}
+                                        <span class="status-badge status-pending">{% trans "Excused" %}</span>
+                                    {% else %}
+                                        <span class="status-badge status-pending">{% trans "Not Marked" %}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ schedule.room|default:"—" }}</td>
+                                <td>{{ schedule.time_slot.start_time|time:"H:i" }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: var(--text-muted);">
+                                    {% trans "No data available" %}
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

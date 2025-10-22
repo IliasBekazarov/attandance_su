@@ -1,0 +1,370 @@
+{% load static %}
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="{% get_current_language as LANGUAGE_CODE %}{{ LANGUAGE_CODE }}">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+        {% block title %}
+            {% get_current_language as LANGUAGE_CODE %}
+            {% if LANGUAGE_CODE == 'ky' %}{{ UNIVERSITY_INFO.name_ky }}
+            {% elif LANGUAGE_CODE == 'ru' %}{{ UNIVERSITY_INFO.name_ru }}
+            {% else %}{{ UNIVERSITY_INFO.name_en }}{% endif %}
+        {% endblock %}
+    </title>
+    <!-- CSRF token for AJAX requests -->
+    <meta name="csrf-token" content="{{ csrf_token }}" />
+    <!-- Bootstrap CSS -->
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- General Styles -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+    <!-- Modern Dashboard CSS (loaded last to override general styles) -->
+    <link rel="stylesheet" href="{% static 'css/modern-dashboard.css' %}" />
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+</head>
+<!-- Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Chart.js for dashboard -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- Modern Dashboard JS -->
+    <script src="{% static 'js/modern-dashboard.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+    <script>
+        // Mobile menu toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+            const sidebar = document.getElementById('sidebar');
+            if (mobileMenuToggle && sidebar) {
+                mobileMenuToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('mobile-open');
+                });
+            }
+
+            // Add smooth scroll behavior
+            document.querySelectorAll('a.nav-link').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    const href = this.getAttribute('href');
+                    if (href.startsWith('#') && document.querySelector(href)) {
+                        e.preventDefault();
+                        document.querySelector(href).scrollIntoView({ behavior: 'smooth' });
+                    }
+                });
+            });
+        });
+    </script>
+<body class="{% if use_modern_layout %}modern-layout{% endif %}">
+    
+    {% if user.is_authenticated %}
+    <!-- Modern Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <span class="logo-text">
+                    {% get_current_language as LANGUAGE_CODE %}
+                    {% if LANGUAGE_CODE == 'ky' %}СУ Системасы
+                    {% elif LANGUAGE_CODE == 'ru' %}СУ Система
+                    {% else %}SU System{% endif %}
+                </span>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{% url 'dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'modern_dashboard' %}active{% endif %}">
+                <i class="fas fa-th-large"></i>
+                <span>{% trans "Dashboard" %}</span>
+            </a>
+
+            {% if user.userprofile.role in 'MANAGER' %}
+            <a href="{% url 'manage_schedule' %}" class="nav-item {% if request.resolver_match.url_name == 'manage_schedule' %}active{% endif %}">
+                <i class="fas fa-briefcase"></i>
+                <span>{% trans "Business management" %}</span>
+            </a>
+            
+            {% endif %}
+
+            {% if user.userprofile.role == 'TEACHER' %}
+            <a href="{% url 'teacher_attendance' %}" class="nav-item {% if request.resolver_match.url_name == 'teacher_attendance' %}active{% endif %}">
+                <i class="fas fa-check-square"></i>
+                <span>{% trans "Attendance" %}</span>
+            </a>
+            {% endif %}
+
+            {% if user.userprofile.role == 'STUDENT' %}
+            <a href="{% url 'student_schedule' %}" class="nav-item {% if 'schedule' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="fas fa-calendar-week"></i>
+                <span>{% trans "My Schedule" %}</span>
+            </a>
+            {% else %}
+            <a href="{% url 'unified_schedule' %}" class="nav-item {% if 'schedule' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="fas fa-calendar-week"></i>
+                <span>{% trans "Schedule" %}</span>
+            </a>
+            {% endif %}
+
+            {% if user.userprofile.role == 'STUDENT' %}
+            <a href="{% url 'submit_leave_request' %}" class="nav-item {% if 'leave' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="fas fa-file-medical"></i>
+                <span>{% trans "Leave Requests" %}</span>
+            </a>
+            {% endif %}
+
+            {% if user.userprofile.role in 'ADMIN,MANAGER,TEACHER' %}
+            <a href="{% url 'report' %}" class="nav-item {% if request.resolver_match.url_name == 'report' %}active{% endif %}">
+                <i class="fas fa-chart-line"></i>
+                <span>{% trans "Reporting" %}</span>
+            </a>
+            {% endif %}
+
+            <!-- Additional Menu Items -->
+            <div class="nav-divider"></div>
+            
+            <a href="{% url 'profile_view' %}" class="nav-item {% if request.resolver_match.url_name == 'profile_view' %}active{% endif %}">
+                <i class="fas fa-user-circle"></i>
+                <span>{% trans "My Profile" %}</span>
+            </a>
+
+            <a href="{% url 'notifications' %}" class="nav-item {% if request.resolver_match.url_name == 'notifications' %}active{% endif %}">
+                <i class="fas fa-bell"></i>
+                <span>{% trans "Notifications" %}</span>
+            </a>
+
+            <a href="{% url 'settings' %}" class="nav-item {% if request.resolver_match.url_name == 'settings' %}active{% endif %}">
+                <i class="fas fa-cog"></i>
+                <span>{% trans "Settings" %}</span>
+            </a>
+        </nav>
+
+        <!-- User Profile Section -->
+        <div class="sidebar-footer">
+            <div class="user-profile">
+                <div class="user-avatar">
+                    {% if user.userprofile.profile_photo %}
+                        <img src="{{ user.userprofile.profile_photo.url }}" alt="Avatar">
+                    {% else %}
+                        <div class="user-avatar-placeholder">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="user-info">
+                    <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
+                    <div class="user-role">
+                        {% if user.userprofile.role == 'ADMIN' %}{% trans "Admin" %}
+                        {% elif user.userprofile.role == 'MANAGER' %}{% trans "Manager" %}
+                        {% elif user.userprofile.role == 'TEACHER' %}{% trans "Teacher" %}
+                        {% elif user.userprofile.role == 'STUDENT' %}{% trans "Student" %}
+                        {% elif user.userprofile.role == 'PARENT' %}{% trans "Parent" %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <a href="{% url 'logout' %}" class="sidebar-logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>{% trans "Logout" %}</span>
+            </a>
+        </div>
+    </aside>
+    {% endif %}
+
+    <!-- Classic Navbar (Hidden when sidebar is active) -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top {% if user.is_authenticated %}classic-navbar{% endif %}" style="width: 100%;">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'home' %}">
+                {% get_current_language as LANGUAGE_CODE %}
+                {% if LANGUAGE_CODE == 'ky' %}{{ UNIVERSITY_INFO.name_ky }}
+                {% elif LANGUAGE_CODE == 'ru' %}{{ UNIVERSITY_INFO.name_ru }}  
+                {% else %}{{ UNIVERSITY_INFO.name_en }}{% endif %}
+            </a>
+            {% if user.is_authenticated %}
+            <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            {% endif %}
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'dashboard' %}"><i class="fas fa-tachometer-alt"></i> {% trans "Dashboard" %}</a>
+                    </li>
+                    {% if user.userprofile.role == 'STUDENT' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'student_schedule' %}"><i class="fas fa-calendar-week"></i> {% trans "My Schedule" %}</a>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'unified_schedule' %}"><i class="fas fa-calendar-week"></i> {% trans "Schedule" %}</a>
+                    </li>
+                    {% endif %}
+                    {% if user.userprofile.role == 'STUDENT' %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="leaveDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-file-medical"></i> {% trans "Leave Requests" %}
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="leaveDropdown">
+                            <li><a class="dropdown-item" href="{% url 'submit_leave_request' %}">
+                                <i class="fas fa-plus"></i> {% trans "New Request" %}
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'my_leave_requests' %}">
+                                <i class="fas fa-list"></i> {% trans "My Requests" %}
+                            </a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
+                    {% if user.userprofile.role == 'TEACHER' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'teacher_attendance' %}"><i class="fas fa-check-square"></i> {% trans "Attendance" %}</a>
+                    </li>
+                    {% endif %}
+                    {% if user.userprofile.role in 'ADMIN,MANAGER,TEACHER' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'manage_leave_requests' %}"><i class="fas fa-clipboard-list"></i> {% trans "Manage Leave Requests" %}</a>
+                    </li>
+                    {% endif %}
+                    {% if user.userprofile.role in 'ADMIN,MANAGER' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'report' %}"><i class="fas fa-chart-bar"></i> {% trans "Reports" %}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'manage_schedule' %}"><i class="fas fa-cogs"></i> {% trans "Manage Schedule" %}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'manage_subjects' %}"><i class="fas fa-book-open"></i> {% trans "Manage Subjects" %}</a>
+                    </li>
+                    {% endif %}
+                    {% if user.userprofile.role == 'ADMIN' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'admin:index' %}"><i class="fas fa-user-shield"></i> {% trans "Admin Panel" %}</a>
+                    </li>
+                    {% endif %}
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}"><i class="fas fa-sign-in-alt"></i> {% trans "Login" %}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'register' %}"><i class="fas fa-user-plus"></i> {% trans "Register" %}</a>
+                    </li>
+                    {% endif %}
+                </ul>
+                {% if user.is_authenticated %}
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link position-relative" href="{% url 'notifications' %}">
+                            <i class="fas fa-bell"></i>
+                            {% if unread_notifications_count and unread_notifications_count > 0 %}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
+                                {{ unread_notifications_count }}
+                            </span>
+                            {% endif %}
+                        </a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user"></i> {{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="{% url 'profile_view' %}">
+                                <i class="fas fa-user-circle"></i> {% trans "My Profile" %}
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'notifications' %}">
+                                <i class="fas fa-bell"></i> {% trans "Notifications" %}
+                                {% comment %}{% if unread_notifications_count %}
+                                    <span class="badge bg-danger ms-1">{{ unread_notifications_count }}</span>
+                                {% endif %}{% endcomment %}
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'settings' %}">
+                                <i class="fas fa-cogs"></i> {% trans "Settings" %}
+                            </a></li>
+                            {% if user.userprofile.role == 'STUDENT' %}
+                            {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt"></i> {% trans "Logout" %}</a></li>
+                        </ul>
+                    </li>
+                </ul>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="{% if user.is_authenticated %}main-content{% else %}container mt-5 pt-5{% endif %}" {% if not user.is_authenticated %}style="min-height: 68vh;"{% endif %}>
+        {% if user.is_authenticated %}
+        <!-- Top Bar for authenticated users -->
+        <header class="top-bar">
+            <div class="top-bar-left">
+                {% comment %} <h1 class="page-title">{% block page_title %}{% trans "Dashboard" %}{% endblock %}</h1> {% endcomment %}
+            </div>
+            <div class="top-bar-right">
+                <!-- Search -->
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="{% trans 'Quick search' %}">
+                </div>
+                <!-- Notifications -->
+                <a href="{% url 'notifications' %}" class="icon-button">
+                    <i class="fas fa-bell"></i>
+                    {% if unread_notifications_count and unread_notifications_count > 0 %}
+                    <span class="notification-badge">{{ unread_notifications_count }}</span>
+                    {% endif %}
+                </a>
+            </div>
+        </header>
+        {% endif %}
+
+        <div class="{% if user.is_authenticated %}content-wrapper{% else %}container{% endif %}">
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% block content %}
+            {% endblock %}
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-light text-center py-4 mt-5" style="width: 100%;">
+        <div class="container">
+            <p>
+                {% get_current_language as LANGUAGE_CODE %}
+                {% if LANGUAGE_CODE == 'ky' %}{{ FOOTER_CONFIG.copyright_text }}
+                {% elif LANGUAGE_CODE == 'ru' %}{{ FOOTER_CONFIG.copyright_text_ru }}
+                {% else %}{{ FOOTER_CONFIG.copyright_text_en }}{% endif %}
+            </p>
+            {% if FOOTER_CONFIG.show_social_links and SOCIAL_MEDIA %}
+            <p>
+                {% if SOCIAL_MEDIA.facebook %}<a href="{{ SOCIAL_MEDIA.facebook }}" class="text-light me-3" target="_blank"><i class="fab fa-facebook-f"></i></a>{% endif %}
+                {% if SOCIAL_MEDIA.instagram %}<a href="{{ SOCIAL_MEDIA.instagram }}" class="text-light me-3" target="_blank"><i class="fab fa-instagram"></i></a>{% endif %}
+                {% if SOCIAL_MEDIA.linkedin %}<a href="{{ SOCIAL_MEDIA.linkedin }}" class="text-light me-3" target="_blank"><i class="fab fa-linkedin"></i></a>{% endif %}
+                {% if SOCIAL_MEDIA.youtube %}<a href="{{ SOCIAL_MEDIA.youtube }}" class="text-light me-3" target="_blank"><i class="fab fa-youtube"></i></a>{% endif %}
+                {% if SOCIAL_MEDIA.telegram %}<a href="{{ SOCIAL_MEDIA.telegram }}" class="text-light" target="_blank"><i class="fab fa-telegram"></i></a>{% endif %}
+            </p>
+            {% endif %}
+            {% if FOOTER_CONFIG.show_contact_info and UNIVERSITY_INFO %}
+            <small class="text-muted">
+                {{ UNIVERSITY_INFO.address }} | {{ UNIVERSITY_INFO.phone }} | {{ UNIVERSITY_INFO.email }}
+            </small>
+            {% endif %}
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Teacher Dashboard" %}{% endblock %}
+
+{% block page_title %}{% trans "Teacher Dashboard" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+.stat-card {
+    border-radius: 15px;
+    padding: 25px;
+    color: white;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    height: 100%;
+}
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+.stat-card i {
+    font-size: 3rem;
+    opacity: 0.9;
+    margin-bottom: 15px;
+}
+.stat-card h3 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 10px 0;
+}
+.stat-card p {
+    font-size: 1rem;
+    opacity: 0.9;
+    margin: 0;
+}
+.class-card {
+    border-radius: 10px;
+    border: none;
+    transition: all 0.3s ease;
+    background: white;
+    margin-bottom: 15px;
+}
+.class-card:hover {
+    transform: translateX(5px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+}
+.class-card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px 10px 0 0;
+    padding: 15px 20px;
+}
+.class-card-body {
+    padding: 20px;
+}
+.group-badge {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin: 3px;
+}
+.action-btn {
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Welcome Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="card-body text-white p-4">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            {% if user.userprofile.profile_photo %}
+                                <img src="{{ user.userprofile.profile_photo.url }}" 
+                                     alt="Profile" 
+                                     class="rounded-circle"
+                                     style="width: 70px; height: 70px; object-fit: cover; border: 3px solid rgba(255,255,255,0.3);">
+                            {% else %}
+                                <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                     style="width: 70px; height: 70px; background: rgba(255,255,255,0.2); border: 3px solid rgba(255,255,255,0.3);">
+                                    <i class="fas fa-chalkboard-teacher fa-2x"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h2 class="mb-1">{% trans "Welcome" %}, {{ request.user.teacher.name }}!</h2>
+                            <p class="mb-0 opacity-75">
+                                <i class="fas fa-briefcase me-2"></i>{% trans "Teacher Dashboard" %}
+                                <span class="mx-2">•</span>
+                                <i class="fas fa-calendar-alt me-2"></i>{{ today|date:"d F Y" }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <i class="fas fa-calendar-check"></i>
+                <h3>{{ today_classes_count|default:"0" }}</h3>
+                <p>{% trans "Today's Classes" %}</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <i class="fas fa-user-graduate"></i>
+                <h3>{{ my_students_count|default:"0" }}</h3>
+                <p>{% trans "Total Students" %}</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <i class="fas fa-book-open"></i>
+                <h3>{{ subjects|length|default:"0" }}</h3>
+                <p>{% trans "My Subjects" %}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2 text-warning"></i>
+                        Тез иш-аракеттер
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <a href="{% url 'unified_schedule' %}" class="btn btn-primary btn-lg w-100 d-flex align-items-center justify-content-center">
+                                <i class="fas fa-calendar-alt me-2"></i>
+                                Расписание башкаруу
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <a href="{% url 'teacher_attendance_history' %}" class="btn btn-info btn-lg w-100 d-flex align-items-center justify-content-center">
+                                <i class="fas fa-history me-2"></i>
+                                Жоктоо тарыхы
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <a href="{% url 'teacher_attendance' %}" class="btn btn-success btn-lg w-100 d-flex align-items-center justify-content-center">
+                                <i class="fas fa-user-check me-2"></i>
+                                Жоктоо белгилөө
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- My Subjects & Groups -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="mb-0">
+                        <i class="fas fa-book me-2 text-primary"></i>
+                        {% trans "My Subjects & Groups" %}
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    {% if subjects %}
+                        {% for subject in subjects %}
+                        <div class="class-card">
+                            <div class="class-card-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-book-open me-2"></i>
+                                        {{ subject.subject_name }}
+                                    </h6>
+                                    <span class="badge bg-white text-primary">
+                                        {{ subject.groups.all|length }} {% trans "Groups" %}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="class-card-body">
+                                <div class="mb-3">
+                                    <strong class="text-muted">{% trans "Groups" %}:</strong>
+                                    <div class="mt-2">
+                                        {% for group in subject.groups.all %}
+                                            <span class="group-badge bg-primary text-white">
+                                                <i class="fas fa-users me-1"></i>{{ group.name }}
+                                            </span>
+                                        {% empty %}
+                                            <span class="text-muted">{% trans "No groups assigned" %}</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <a href="{% url 'teacher_attendance' %}" class="btn btn-success btn-sm action-btn">
+                                        <i class="fas fa-check me-1"></i>{% trans "Mark Attendance" %}
+                                    </a>
+                                    <a href="{% url 'universal_schedule' %}" class="btn btn-primary btn-sm action-btn">
+                                        <i class="fas fa-calendar me-1"></i>{% trans "View Schedule" %}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-book-open fa-4x text-muted mb-3"></i>
+                            <h5 class="text-muted">{% trans "No subjects assigned yet" %}</h5>
+                            <p class="text-muted">{% trans "Please contact the administrator" %}</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2 text-warning"></i>
+                        {% trans "Quick Actions" %}
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="d-grid gap-3">
+                        <a href="{% url 'teacher_attendance' %}" class="btn btn-success action-btn">
+                            <i class="fas fa-check-square me-2"></i>{% trans "Mark Attendance" %}
+                        </a>
+                        <a href="{% url 'universal_schedule' %}" class="btn btn-primary action-btn">
+                            <i class="fas fa-calendar-week me-2"></i>{% trans "View Schedule" %}
+                        </a>
+                        <a href="{% url 'report' %}" class="btn btn-info action-btn">
+                            <i class="fas fa-chart-line me-2"></i>{% trans "View Reports" %}
+                        </a>
+                        <a href="/leave/manage/" class="btn btn-warning action-btn">
+                            <i class="fas fa-file-alt me-2"></i>{% trans "Leave Requests" %}
+                        </a>
+                        <a href="{% url 'notifications' %}" class="btn btn-secondary action-btn">
+                            <i class="fas fa-bell me-2"></i>{% trans "Notifications" %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Today's Schedule -->
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clock me-2 text-info"></i>
+                        {% trans "Today's Schedule" %}
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    {% if today_schedule %}
+                        {% for schedule in today_schedule %}
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                            <div>
+                                <strong class="d-block">{{ schedule.subject }}</strong>
+                                <small class="text-muted">{{ schedule.group }}</small>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-primary d-block">
+                                    <i class="fas fa-clock me-1"></i>{{ schedule.time }}
+                                </small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-calendar-times fa-3x text-muted mb-2"></i>
+                            <p class="text-muted mb-0">{% trans "No classes today" %}</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

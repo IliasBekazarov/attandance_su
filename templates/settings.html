@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% load django_bootstrap5 %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}
+    {% trans "Settings" %} - {% get_current_language as LANGUAGE_CODE %}
+    {% if LANGUAGE_CODE == 'ky' %}{{ UNIVERSITY_INFO.name_ky }}
+    {% elif LANGUAGE_CODE == 'ru' %}{{ UNIVERSITY_INFO.name_ru }}
+    {% else %}{{ UNIVERSITY_INFO.name_en }}{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/settings.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <!-- Settings Cards -->
+            <div class="row g-4">
+                <!-- Language Settings -->
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-lg rounded-3 h-100">
+                        <div class="card-header text-white border-0 rounded-top-3">
+                            <h5 class="card-title mb-0 fw-semibold">
+                                <i class="fas fa-globe me-2"></i>
+                                {% trans "Language Settings" %}
+                            </h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <p class="card-text text-muted mb-4">
+                                {% trans "Choose your preferred language" %}
+                            </p>
+                            
+                            <form method="post" id="language-form">
+                                {% csrf_token %}
+                                <div class="mb-4">
+                                    <label class="form-label fw-medium">{% trans "Select Language" %}:</label>
+                                    <div class="language-selector">
+                                        {% for lang_code, lang_name in available_languages %}
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="radio" 
+                                                   name="language" value="{{ lang_code }}" 
+                                                   id="lang_{{ lang_code }}"
+                                                   {% if lang_code == current_language %}checked{% endif %}
+                                                   onchange="this.form.submit();">
+                                            <label class="form-check-label d-flex align-items-center p-3 rounded-3" for="lang_{{ lang_code }}">
+                                                {% if lang_code == 'ky' %}
+                                                    <span class="flag-icon me-3">🇰🇬</span>
+                                                    <span class="fw-medium">Кыргызча</span>
+                                                {% elif lang_code == 'ru' %}
+                                                    <span class="flag-icon me-3">🇷🇺</span>
+                                                    <span class="fw-medium">Русский</span>
+                                                {% elif lang_code == 'en' %}
+                                                    <span class="flag-icon me-3">🇺🇸</span>
+                                                    <span class="fw-medium">English</span>
+                                                {% else %}
+                                                    <span class="fw-medium">{{ lang_name }}</span>
+                                                {% endif %}
+                                            </label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </form>
+                            
+                            <div class="current-language p-3 bg-light rounded-3">
+                                <small class="text-muted fw-medium">
+                                    {% trans "Current language" %}:
+                                    <strong>
+                                        {% if current_language == 'ky' %}🇰🇬 Кыргызча
+                                        {% elif current_language == 'ru' %}🇷🇺 Русский
+                                        {% elif current_language == 'en' %}🇺🇸 English
+                                        {% else %}{{ current_language }}
+                                        {% endif %}
+                                    </strong>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Settings -->
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-lg rounded-3 h-100">
+                        <div class="card-header text-white border-0 rounded-top-3">
+                            <h5 class="card-title mb-0 fw-semibold">
+                                <i class="fas fa-user-cog me-2"></i>
+                                {% trans "Profile Settings" %}
+                            </h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="user-info">
+                                <div class="d-flex align-items-center mb-4">
+                                    <div class="avatar me-3">
+                                        <i class="fas fa-user-circle fa-3x text-muted"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-1 fw-bold">{{ user.get_full_name|default:user.username }}</h6>
+                                        <small class="text-muted">
+                                            {% if user_profile %}
+                                                {{ user_profile.get_role_display }}
+                                            {% else %}
+                                                {% trans "User" %}
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                                
+                                <div class="user-details">
+                                    <div class="detail-item mb-3 d-flex align-items-center">
+                                        <i class="fas fa-envelope text-primary me-3"></i>
+                                        <span>{{ user.email|default:"No email" }}</span>
+                                    </div>
+                                    <div class="detail-item mb-3 d-flex align-items-center">
+                                        <i class="fas fa-calendar text-primary me-3"></i>
+                                        <span>{% trans "Joined" %}: {{ user.date_joined|date:"M d, Y" }}</span>
+                                    </div>
+                                    <div class="detail-item d-flex align-items-center">
+                                        <i class="fas fa-clock text-primary me-3"></i>
+                                        <span>{% trans "Last login" %}: {{ user.last_login|date:"M d, Y H:i"|default:"Never" }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <a href="{% url 'profile_view' %}" class="btn btn-outline-info btn-sm px-4">
+                                    <i class="fas fa-edit me-1"></i>{% trans "Edit Profile" %}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Information -->
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-lg rounded-3 h-100">
+                        <div class="card-header text-white border-0 rounded-top-3">
+                            <h5 class="card-title mb-0 fw-semibold">
+                                <i class="fas fa-info-circle me-2"></i>
+                                {% trans "System Information" %}
+                            </h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="system-info">
+                                <div class="info-item mb-3 d-flex align-items-center">
+                                    <strong class="fw-medium">{% trans "System Version" %}:</strong>
+                                    <span class="text-muted ms-2">{{ SYSTEM_CONFIG.version|default:"1.0.0" }}</span>
+                                </div>
+                                <div class="info-item mb-3 d-flex align-items-center">
+                                    <strong class="fw-medium">{% trans "Build Date" %}:</strong>
+                                    <span class="text-muted ms-2">{{ SYSTEM_CONFIG.build_date|default:"2025-09-21" }}</span>
+                                </div>
+                                <div class="info-item mb-3 d-flex align-items-center">
+                                    <strong class="fw-medium">{% trans "Academic Year" %}:</strong>
+                                    <span class="text-muted ms-2">{{ ACADEMIC_CONFIG.current_academic_year|default:"2024-2025" }}</span>
+                                </div>
+                                <div class="info-item d-flex align-items-center">
+                                    <strong class="fw-medium">{% trans "Contact Support" %}:</strong>
+                                    <span class="text-muted ms-2">{{ SYSTEM_CONFIG.contact_email|default:"support@salymbekov.kg" }}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <small class="text-muted d-flex align-items-center">
+                                    <i class="fas fa-shield-alt me-2 text-primary"></i>
+                                    {% trans "Your data is secure and protected" %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('language-form').addEventListener('submit', function() {
+    const submitBtn = document.createElement('div');
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>{% trans "Changing language..." %}';
+    submitBtn.className = 'text-center mt-3 text-muted animate-pulse';
+    this.appendChild(submitBtn);
+});
+</script>
+{% endblock %}

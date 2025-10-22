@@ -1,0 +1,525 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}Жоктоо тарыхы - Мугалим{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-history text-primary"></i> Жоктоо тарыхы</h2>
+                <div>
+                    <button class="btn btn-success" onclick="toggleBulkEdit()">
+                        <i class="fas fa-edit"></i> Массалык өзгөртүү
+                    </button>
+                    <a href="{% url 'unified_schedule' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Артка
+                    </a>
+                </div>
+            </div>
+
+            <!-- СТАТИСТИКА -->
+            <div class="row mb-4">
+                <div class="col-md-2">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <h4>{{ statistics.present }}</h4>
+                            <small>Катышкан</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card bg-danger text-white">
+                        <div class="card-body text-center">
+                            <h4>{{ statistics.absent }}</h4>
+                            <small>Жок</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body text-center">
+                            <h4>{{ statistics.late }}</h4>
+                            <small>Кеч калган</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                            <h4>{{ statistics.excused }}</h4>
+                            <small>Акталган</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body text-center">
+                            <h4>{{ statistics.total }}</h4>
+                            <small>Жалпы жазуулар</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ФИЛЬТРЛЕР -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-filter"></i> Фильтрлер</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" id="filterForm">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label>Сабак:</label>
+                                <select name="subject" class="form-control" onchange="submitFilter()">
+                                    <option value="">Бардык сабактар</option>
+                                    {% for subject in teacher_subjects %}
+                                        <option value="{{ subject.id }}" {% if filters.subject == subject.id|stringformat:"s" %}selected{% endif %}>
+                                            {{ subject.subject_name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label>Группа:</label>
+                                <select name="group" class="form-control" onchange="submitFilter()">
+                                    <option value="">Бардык группалар</option>
+                                    {% for group in teacher_groups %}
+                                        <option value="{{ group.id }}" {% if filters.group == group.id|stringformat:"s" %}selected{% endif %}>
+                                            {{ group.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label>Башталган күн:</label>
+                                <input type="date" name="date_from" class="form-control" value="{{ filters.date_from }}" onchange="submitFilter()">
+                            </div>
+                            <div class="col-md-2">
+                                <label>Аяктаган күн:</label>
+                                <input type="date" name="date_to" class="form-control" value="{{ filters.date_to }}" onchange="submitFilter()">
+                            </div>
+                            <div class="col-md-2">
+                                <label>Абал:</label>
+                                <select name="status" class="form-control" onchange="submitFilter()">
+                                    <option value="">Бардык абалдар</option>
+                                    {% for choice in status_choices %}
+                                        <option value="{{ choice.0 }}" {% if filters.status == choice.0 %}selected{% endif %}>
+                                            {{ choice.1 }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label>Студент издөө:</label>
+                                <input type="text" name="student" class="form-control" placeholder="Студенттин аты же ID" 
+                                       value="{{ filters.student }}" onkeyup="delayedFilter()">
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <button type="button" class="btn btn-secondary" onclick="clearFilters()">
+                                    <i class="fas fa-broom"></i> Тазалоо
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- МАССАЛЫК ӨЗГӨРТҮҮ ПАНЕЛИ -->
+            <div id="bulkEditPanel" class="card mb-4" style="display: none;">
+                <div class="card-header bg-warning">
+                    <h5><i class="fas fa-edit"></i> Массалык өзгөртүү</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label>Жаңы абал:</label>
+                            <select id="bulkStatus" class="form-control">
+                                <option value="">Абалды тандаңыз</option>
+                                <option value="Present">Катышкан</option>
+                                <option value="Absent">Жок</option>
+                                <option value="Late">Кеч калган</option>
+                                <option value="Excused">Акталган</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label>Өзгөртүүнүн себеби:</label>
+                            <input type="text" id="bulkReason" class="form-control" placeholder="Өзгөртүүнүн себебин жазыңыз">
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button class="btn btn-warning me-2" onclick="applyBulkEdit()">
+                                <i class="fas fa-save"></i> Сактоо
+                            </button>
+                            <button class="btn btn-secondary" onclick="toggleBulkEdit()">
+                                Жабуу
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">Тандалган жазуулар: <span id="selectedCount">0</span></small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ЖОКТОО ТАБЛИЦАСЫ -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-table"></i> Жоктоо жазуулары</h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary" onclick="selectAll()">
+                                <i class="fas fa-check-square"></i> Баарын тандоо
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="deselectAll()">
+                                <i class="fas fa-square"></i> Тандалганды алып салуу
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if attendance_records %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th width="50">
+                                            <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()">
+                                        </th>
+                                        <th>Студент</th>
+                                        <th>Группа</th>
+                                        <th>Сабак</th>
+                                        <th>Күн</th>
+                                        <th>Абал</th>
+                                        <th>Белгилеген</th>
+                                        <th>Убактысы</th>
+                                        <th>Иш-аракет</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for record in attendance_records %}
+                                        <tr>
+                                            <td>
+                                                <input type="checkbox" class="record-checkbox" value="{{ record.id }}" onchange="updateSelectedCount()">
+                                            </td>
+                                            <td>
+                                                <strong>{{ record.student.name }}</strong><br>
+                                                <small class="text-muted">{{ record.student.student_id }}</small>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary">{{ record.student.group.name }}</span>
+                                            </td>
+                                            <td>{{ record.subject.subject_name }}</td>
+                                            <td>{{ record.date|date:"d.m.Y" }}</td>
+                                            <td>
+                                                {% if record.status == 'Present' %}
+                                                    <span class="badge bg-success">Катышкан</span>
+                                                {% elif record.status == 'Absent' %}
+                                                    <span class="badge bg-danger">Жок</span>
+                                                {% elif record.status == 'Late' %}
+                                                    <span class="badge bg-warning">Кеч калган</span>
+                                                {% elif record.status == 'Excused' %}
+                                                    <span class="badge bg-info">Акталган</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if record.created_by %}
+                                                    {{ record.created_by.get_full_name }}
+                                                {% else %}
+                                                    <span class="text-muted">Белгисиз</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ record.marked_at|date:"d.m.Y H:i" }}</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-primary" 
+                                                        onclick="editSingleAttendance({{ record.id }}, '{{ record.student.name }}', '{{ record.status }}')">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- PAGINATION -->
+                        {% if attendance_records.has_other_pages %}
+                            <nav aria-label="Pagination">
+                                <ul class="pagination justify-content-center">
+                                    {% if attendance_records.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ attendance_records.previous_page_number }}">Мурунку</a>
+                                        </li>
+                                    {% endif %}
+
+                                    {% for num in attendance_records.paginator.page_range %}
+                                        {% if attendance_records.number == num %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ num }}</span>
+                                            </li>
+                                        {% elif num > attendance_records.number|add:'-3' and num < attendance_records.number|add:'3' %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+
+                                    {% if attendance_records.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ attendance_records.next_page_number }}">Кийинки</a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        {% endif %}
+
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Жоктоо жазуулары табылган жок</h5>
+                            <p class="text-muted">Фильтрлерди өзгөртүп көрүңүз же жаңы жоктоо белгилеңиз</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ЖАЛГЫЗ ӨЗГӨРТҮҮ МОДАЛИ -->
+<div class="modal fade" id="editSingleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Жоктоону өзгөртүү</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <strong>Студент:</strong> <span id="editStudentName"></span>
+                </div>
+                <div class="mb-3">
+                    <strong>Учурдагы абал:</strong> <span id="editCurrentStatus"></span>
+                </div>
+                <div class="mb-3">
+                    <label>Жаңы абал:</label>
+                    <select id="editNewStatus" class="form-control">
+                        <option value="Present">Катышкан</option>
+                        <option value="Absent">Жок</option>
+                        <option value="Late">Кеч калган</option>
+                        <option value="Excused">Акталган</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label>Өзгөртүүнүн себеби:</label>
+                    <textarea id="editReason" class="form-control" rows="3" placeholder="Өзгөртүүнүн себебин жазыңыз"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Жабуу</button>
+                <button type="button" class="btn btn-primary" onclick="saveSingleEdit()">Сактоо</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let filterTimeout;
+let currentEditId = null;
+
+// Фильтр функциялары
+function submitFilter() {
+    document.getElementById('filterForm').submit();
+}
+
+function delayedFilter() {
+    clearTimeout(filterTimeout);
+    filterTimeout = setTimeout(() => {
+        submitFilter();
+    }, 1000);
+}
+
+function clearFilters() {
+    window.location.href = '{% url "teacher_attendance_history" %}';
+}
+
+// Массалык өзгөртүү
+function toggleBulkEdit() {
+    const panel = document.getElementById('bulkEditPanel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    if (panel.style.display === 'none') {
+        deselectAll();
+    }
+}
+
+function updateSelectedCount() {
+    const checked = document.querySelectorAll('.record-checkbox:checked').length;
+    document.getElementById('selectedCount').textContent = checked;
+}
+
+function selectAll() {
+    document.querySelectorAll('.record-checkbox').forEach(cb => cb.checked = true);
+    updateSelectedCount();
+}
+
+function deselectAll() {
+    document.querySelectorAll('.record-checkbox').forEach(cb => cb.checked = false);
+    document.getElementById('selectAllCheckbox').checked = false;
+    updateSelectedCount();
+}
+
+function toggleSelectAll() {
+    const mainCheckbox = document.getElementById('selectAllCheckbox');
+    document.querySelectorAll('.record-checkbox').forEach(cb => cb.checked = mainCheckbox.checked);
+    updateSelectedCount();
+}
+
+function applyBulkEdit() {
+    const selectedIds = Array.from(document.querySelectorAll('.record-checkbox:checked')).map(cb => cb.value);
+    const newStatus = document.getElementById('bulkStatus').value;
+    const reason = document.getElementById('bulkReason').value;
+
+    if (selectedIds.length === 0) {
+        alert('Жазууларды тандаңыз!');
+        return;
+    }
+
+    if (!newStatus) {
+        alert('Жаңы абалды тандаңыз!');
+        return;
+    }
+
+    if (!reason.trim()) {
+        alert('Өзгөртүүнүн себебин жазыңыз!');
+        return;
+    }
+
+    fetch('/api/attendance/bulk-edit/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            attendance_ids: selectedIds,
+            new_status: newStatus,
+            reason: reason
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Ийгиликтүү өзгөртүлдү: ' + data.message);
+            location.reload();
+        } else {
+            alert('Ката: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Тармак катасы: ' + error);
+    });
+}
+
+// Жалгыз өзгөртүү
+function editSingleAttendance(id, studentName, currentStatus) {
+    currentEditId = id;
+    document.getElementById('editStudentName').textContent = studentName;
+    document.getElementById('editCurrentStatus').textContent = getStatusDisplay(currentStatus);
+    document.getElementById('editNewStatus').value = currentStatus;
+    document.getElementById('editReason').value = '';
+    
+    new bootstrap.Modal(document.getElementById('editSingleModal')).show();
+}
+
+function saveSingleEdit() {
+    const newStatus = document.getElementById('editNewStatus').value;
+    const reason = document.getElementById('editReason').value;
+
+    if (!reason.trim()) {
+        alert('Өзгөртүүнүн себебин жазыңыз!');
+        return;
+    }
+
+    fetch('/api/attendance/edit/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            attendance_id: currentEditId,
+            new_status: newStatus,
+            reason: reason
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Ийгиликтүү өзгөртүлдү!');
+            bootstrap.Modal.getInstance(document.getElementById('editSingleModal')).hide();
+            location.reload();
+        } else {
+            alert('Ката: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Тармак катасы: ' + error);
+    });
+}
+
+// Кошумча функциялар
+function getStatusDisplay(status) {
+    const statusMap = {
+        'Present': 'Катышкан',
+        'Absent': 'Жок',
+        'Late': 'Кеч калган',
+        'Excused': 'Акталган'
+    };
+    return statusMap[status] || status;
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.075);
+}
+
+.record-checkbox {
+    transform: scale(1.2);
+}
+
+#bulkEditPanel {
+    border-left: 4px solid #ffc107;
+}
+
+.pagination .page-link {
+    color: #007bff;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+</style>
+{% endblock %}

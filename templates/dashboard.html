@@ -1,0 +1,957 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Dashboard" %}{% endblock %}
+
+{% block page_title %}{% trans "Dashboard" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Profile photo effects on dashboard */
+.profile-photo-dashboard:hover {
+    transform: scale(1.05);
+    border-color: rgba(255,255,255,0.8) !important;
+    box-shadow: 0 0 20px rgba(255,255,255,0.3);
+}
+
+.profile-photo-placeholder-dashboard:hover {
+    background: rgba(255,255,255,0.3) !important;
+    transform: scale(1.05);
+    border-color: rgba(255,255,255,0.8) !important;
+    box-shadow: 0 0 20px rgba(255,255,255,0.3);
+}
+
+.profile-link:hover {
+    text-shadow: 0 0 10px rgba(255,255,255,0.5);
+}
+
+/* Pulse animation for incomplete profile */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 193, 7, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
+    }
+}
+
+.badge.bg-warning {
+    animation: pulse 2s infinite;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Колдонуучу маалыматтары -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <!-- Профил сүрөтү -->
+                            <div class="me-3">
+                                <a href="{% url 'profile_view' %}" class="text-decoration-none">
+                                    {% if user.userprofile.profile_photo %}
+                                        <img src="{{ user.userprofile.profile_photo.url }}" 
+                                             alt="Profile Photo" 
+                                             class="rounded-circle profile-photo-dashboard"
+                                             style="width: 70px; height: 70px; object-fit: cover; border: 3px solid rgba(255,255,255,0.3); transition: all 0.3s ease;">
+                                    {% else %}
+                                        <div class="profile-photo-placeholder-dashboard d-flex align-items-center justify-content-center rounded-circle"
+                                             style="width: 70px; height: 70px; background: rgba(255,255,255,0.2); border: 3px solid rgba(255,255,255,0.3); color: white; font-size: 1.5rem; transition: all 0.3s ease;">
+                                            <i class="fas fa-user"></i>
+                                        </div>
+                                    {% endif %}
+                                </a>
+                            </div>
+                            
+                            <!-- Колдонуучу маалыматтары -->
+                            <div>
+                                <h2 class="mb-1">
+                                    <a href="{% url 'profile_view' %}" class="text-white text-decoration-none">
+                                        {{ user.get_full_name|default:user.username }}
+                                    </a>
+                                </h2>
+                                <p class="mb-0">
+                                    {% if role == 'ADMIN' %}
+                                        <i class="fas fa-crown me-2"></i>{% trans "System Administrator" %}
+                                    {% elif role == 'MANAGER' %}
+                                        <i class="fas fa-clipboard-list me-2"></i>{% trans "Manager" %}
+                                    {% elif role == 'TEACHER' %}
+                                        <i class="fas fa-chalkboard-teacher me-2"></i>{% trans "Teacher" %}
+                                        {% if teacher_obj %}
+                                            - {{ teacher_obj.name }}
+                                        {% endif %}
+                                    {% elif role == 'STUDENT' %}
+                                        <i class="fas fa-user-graduate me-2"></i>{% trans "Student" %}
+                                        {% if student_obj %}
+                                            - {{ student_obj.name }} ({{ student_obj.group.name }})
+                                        {% endif %}
+                                    {% elif role == 'PARENT' %}
+                                        <i class="fas fa-heart me-2"></i>{% trans "Parent" %}
+                                    {% endif %}
+                                </p>
+                                <!-- Профилди өзгөртүү шилтемеси -->
+                                <small class="text-white-50">
+                                    <a href="{% url 'profile_edit' %}" class="text-white-50 text-decoration-none">
+                                        <i class="fas fa-edit me-1"></i>{% trans "Edit Profile" %}
+                                    </a>
+                                </small>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <div class="badge bg-light text-dark fs-6 mb-2">
+                                <i class="fas fa-calendar-alt me-1"></i>
+                                {{ today|date:"d F Y" }}
+                            </div>
+                            <!-- Профил толуктугу -->
+                            {% if user.userprofile.is_profile_complete %}
+                                <div class="badge bg-success fs-6">
+                                    <i class="fas fa-check-circle me-1"></i>{% trans "Profile Complete" %}
+                                </div>
+                            {% else %}
+                                <div class="badge bg-warning text-dark fs-6">
+                                    <i class="fas fa-exclamation-circle me-1"></i>{% trans "Complete Your Profile" %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- АДМИН/МЕНЕДЖЕР ПАНЕЛИ -->
+    {% if role == 'ADMIN' or role == 'MANAGER' %}
+    <div class="row g-4 mb-4">
+        <!-- Статистика карточкалары -->
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-users fa-2x text-primary"></i>
+                    </div>
+                    <h3 class="mb-1">{{ total_students }}</h3>
+                    <p class="text-muted mb-0">{% trans "Students" %}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-chalkboard-teacher fa-2x text-success"></i>
+                    </div>
+                    <h3 class="mb-1">{{ total_teachers }}</h3>
+                    <p class="text-muted mb-0">{% trans "Teachers" %}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-layer-group fa-2x text-info"></i>
+                    </div>
+                    <h3 class="mb-1">{{ total_groups }}</h3>
+                    <p class="text-muted mb-0">{% trans "Groups" %}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-book-open fa-2x text-warning"></i>
+                    </div>
+                    <h3 class="mb-1">{{ total_subjects }}</h3>
+                    <p class="text-muted mb-0">{% trans "Subjects" %}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Соңку жумада катышуу тренди графиги -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-9">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2 text-primary"></i>
+                        {% trans "Weekly Attendance Trend" %} ({% trans "Last 7 Days" %})
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <canvas id="weeklyAttendanceChart" height="80"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Бүгүнкү статистика -->
+        <div class="col-lg-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h6 class="mb-0">
+                        <i class="fas fa-calendar-day me-2 text-info"></i>
+                        {% trans "Today's Statistics" %}
+                    </h6>
+                </div>
+                <div class="card-body p-4">
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted">{% trans "Total Records" %}</span>
+                            <strong class="h5 mb-0">{{ today_total }}</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-success">
+                                <i class="fas fa-check-circle me-1"></i>{% trans "Present" %}
+                            </span>
+                            <strong>{{ today_present }}</strong>
+                        </div>
+                        <div class="progress mb-2" style="height: 8px;">
+                            <div class="progress-bar bg-success" style="width: {{ today_present_rate }}%"></div>
+                        </div>
+                        <small class="text-muted">{{ today_present_rate }}%</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-danger">
+                                <i class="fas fa-times-circle me-1"></i>{% trans "Absent" %}
+                            </span>
+                            <strong>{{ today_absent }}</strong>
+                        </div>
+                        <div class="progress mb-2" style="height: 8px;">
+                            <div class="progress-bar bg-danger" style="width: {{ today_absent_rate }}%"></div>
+                        </div>
+                        <small class="text-muted">{{ today_absent_rate }}%</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-warning">
+                                <i class="fas fa-exclamation-circle me-1"></i>{% trans "Excused" %}
+                            </span>
+                            <strong>{{ today_excused }}</strong>
+                        </div>
+                        <div class="progress mb-2" style="height: 8px;">
+                            <div class="progress-bar bg-warning" style="width: {{ today_excused_rate }}%"></div>
+                        </div>
+                        <small class="text-muted">{{ today_excused_rate }}%</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Группалар боюнча статистика -->
+    {% comment %} <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2 text-success"></i>
+                        {% trans "Groups Statistics" %}
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row">
+                        {% if groups_stats %}
+                            {% for group in groups_stats %}
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <div class="card h-100 border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                    <div class="card-body text-white">
+                                        <div class="d-flex justify-content-between align-items-start mb-3">
+                                            <div>
+                                                <h5 class="mb-1">
+                                                    <i class="fas fa-layer-group me-2"></i>
+                                                    {{ group.name }}
+                                                </h5>
+                                                <small class="opacity-75">{{ group.course.name }}</small>
+                                            </div>
+                                            <div class="badge bg-white text-primary px-3 py-2">
+                                                {{ group.students_count }} {% trans "students" %}
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row text-center mt-4">
+                                            <div class="col-4">
+                                                <h3 class="mb-0">{{ group.present_count|default:0 }}</h3>
+                                                <small class="opacity-75">{% trans "Present" %}</small>
+                                            </div>
+                                            <div class="col-4">
+                                                <h3 class="mb-0">{{ group.absent_count|default:0 }}</h3>
+                                                <small class="opacity-75">{% trans "Absent" %}</small>
+                                            </div>
+                                            <div class="col-4">
+                                                <h3 class="mb-0">{{ group.attendance_rate|default:0 }}%</h3>
+                                                <small class="opacity-75">{% trans "Rate" %}</small>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="progress mt-3" style="height: 8px; background: rgba(255,255,255,0.2);">
+                                            <div class="progress-bar bg-white" role="progressbar" 
+                                                 style="width: {{ group.attendance_rate|default:0 }}%"
+                                                 aria-valuenow="{{ group.attendance_rate|default:0 }}" 
+                                                 aria-valuemin="0" aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mt-3 pt-3 border-top border-white border-opacity-25">
+                                            <small class="opacity-75">
+                                                <i class="fas fa-chalkboard-teacher me-2"></i>
+                                                {% trans "Subjects" %}: {{ group.subjects_count|default:0 }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="col-12">
+                                <div class="text-center py-5">
+                                    <i class="fas fa-users-slash fa-4x text-muted mb-3"></i>
+                                    <h5 class="text-muted">{% trans "No groups data available" %}</h5>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> {% endcomment %}
+
+    <!-- Детальдуу таблица - Группалар боюнча -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="mb-0">
+                        <i class="fas fa-table me-2 text-info"></i>
+                        {% trans "Detailed Groups Statistics" %}
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    {% if groups_stats %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="fw-bold">
+                                            <i class="fas fa-layer-group me-2 text-primary"></i>
+                                            {% trans "Group" %}
+                                        </th>
+                                        <th class="fw-bold text-center">
+                                            <i class="fas fa-clipboard-list me-2 text-info"></i>
+                                            {% trans "Total Records" %}
+                                        </th>
+                                        <th class="fw-bold text-center">
+                                            <i class="fas fa-check-circle me-2 text-success"></i>
+                                            {% trans "Present" %}
+                                        </th>
+                                        <th class="fw-bold text-center">
+                                            <i class="fas fa-times-circle me-2 text-danger"></i>
+                                            {% trans "Absent" %}
+                                        </th>
+                                        <th class="fw-bold text-center">
+                                            <i class="fas fa-percentage me-2 text-warning"></i>
+                                            {% trans "Percentage" %}
+                                        </th>
+                                        <th class="fw-bold" style="width: 200px;">
+                                            <i class="fas fa-chart-bar me-2 text-primary"></i>
+                                            {% trans "Progress" %}
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for group in groups_stats %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="badge bg-primary me-2" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px;">
+                                                    <i class="fas fa-users"></i>
+                                                </div>
+                                                <div>
+                                                    <strong class="d-block">{{ group.name }}</strong>
+                                                    <small class="text-muted">{{ group.course.name }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-info px-3 py-2">
+                                                {{ group.total_records|default:0 }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-success px-3 py-2">
+                                                {{ group.present_count|default:0 }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-danger px-3 py-2">
+                                                {{ group.absent_count|default:0 }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge {% if group.attendance_rate >= 80 %}bg-success{% elif group.attendance_rate >= 60 %}bg-warning{% else %}bg-danger{% endif %} px-3 py-2">
+                                                {{ group.attendance_rate|default:0 }}%
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="progress flex-grow-1 me-2" style="height: 20px;">
+                                                    <div class="progress-bar {% if group.attendance_rate >= 80 %}bg-success{% elif group.attendance_rate >= 60 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                         role="progressbar" 
+                                                         style="width: {{ group.attendance_rate|default:0 }}%"
+                                                         aria-valuenow="{{ group.attendance_rate|default:0 }}" 
+                                                         aria-valuemin="0" 
+                                                         aria-valuemax="100">
+                                                        <small class="fw-bold">{{ group.attendance_rate|default:0 }}%</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot class="table-light">
+                                    <tr class="fw-bold">
+                                        <td>
+                                            <i class="fas fa-calculator me-2 text-primary"></i>
+                                            {% trans "Total" %}
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-info px-3 py-2">
+                                                {{ total_all_records|default:0 }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-success px-3 py-2">
+                                                {{ total_present|default:0 }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-danger px-3 py-2">
+                                                {{ total_absent|default:0 }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-primary px-3 py-2">
+                                                {{ overall_attendance_rate|default:0 }}%
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar bg-primary" 
+                                                     role="progressbar" 
+                                                     style="width: {{ overall_attendance_rate|default:0 }}%"
+                                                     aria-valuenow="{{ overall_attendance_rate|default:0 }}" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="100">
+                                                    <small class="fw-bold">{{ overall_attendance_rate|default:0 }}%</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-table fa-4x text-muted mb-3"></i>
+                            <h5 class="text-muted">{% trans "No statistics data available" %}</h5>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- МУГАЛИМ ПАНЕЛИ -->
+    {% if role == 'TEACHER' %}
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="card-body text-white text-center">
+                    <i class="fas fa-calendar-check fa-3x mb-3"></i>
+                    <h4>{% trans "Today's Classes" %}</h4>
+                    <h2 class="mb-0">{{ today_classes_count|default:0 }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 bg-gradient" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                <div class="card-body text-white text-center">
+                    <i class="fas fa-check-circle fa-3x mb-3"></i>
+                    <h4>Белгиленген</h4>
+                    <h2 class="mb-0">{{ marked_classes_count|default:0 }}</h2>
+                    <small class="opacity-75">сабак</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 bg-gradient" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
+                <div class="card-body text-white text-center">
+                    <i class="fas fa-clock fa-3x mb-3"></i>
+                    <h4>Күтүүдө</h4>
+                    <h2 class="mb-0">{{ unmarked_classes_count|default:0 }}</h2>
+                    <small class="opacity-75">сабак</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 bg-gradient" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <div class="card-body text-white text-center">
+                    <i class="fas fa-users fa-3x mb-3"></i>
+                    <h4>{% trans "Students" %}</h4>
+                    <h2 class="mb-0">{{ my_students_count|default:0 }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 bg-gradient" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <div class="card-body text-white text-center">
+                    <i class="fas fa-book fa-3x mb-3"></i>
+                    <h4>{% trans "Subjects" %}</h4>
+                    <h2 class="mb-0">{{ my_subjects_count|default:0 }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Мугалимдин тез функциялары -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i>{% trans "Today's Schedule" %}</h5>
+                </div>
+                <div class="card-body">
+                    {% if today_schedule %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>{% trans "Time" %}</th>
+                                        <th>{% trans "Subject" %}</th>
+                                        <th>{% trans "Group" %}</th>
+                                        <th>{% trans "Attendance" %}</th>
+                                        <th>{% trans "Action" %}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for schedule in today_schedule %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ schedule.start_time|time:"H:i" }} - {{ schedule.end_time|time:"H:i" }}</strong>
+                                        </td>
+                                        <td>{{ schedule.subject.subject_name }}</td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ schedule.group.name }}</span>
+                                        </td>
+                                        <td>
+                                            {% if schedule.attendance_marked %}
+                                                <span class="badge bg-success me-2">
+                                                    <i class="fas fa-check-circle me-1"></i>Белгиленген
+                                                </span>
+                                                <div class="mt-1">
+                                                    <small class="text-muted">
+                                                        {{ schedule.marked_count }}/{{ schedule.total_students }} студент
+                                                        ({{ schedule.attendance_progress }}%)
+                                                    </small>
+                                                </div>
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="fas fa-clock me-1"></i>Белгиленбеген
+                                                </span>
+                                                <div class="mt-1">
+                                                    <small class="text-muted">
+                                                        0/{{ schedule.total_students }} студент
+                                                    </small>
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if schedule.attendance_marked %}
+                                                <button class="btn btn-sm btn-secondary" disabled>
+                                                    <i class="fas fa-check me-1"></i>Аяктады
+                                                </button>
+                                                <a href="{% url 'universal_schedule' %}" class="btn btn-sm btn-outline-info" title="Расписаниени көрүү">
+                                                    <i class="fas fa-eye me-1"></i>Көрүү
+                                                </a>
+                                            {% else %}
+                                                <a href="{% url 'universal_schedule' %}" class="btn btn-sm btn-success">
+                                                    <i class="fas fa-check me-1"></i>{% trans "Mark Attendance" %}
+                                                </a>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-calendar-times fa-3x mb-3"></i>
+                            <p>{% trans "No classes today" %}</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        {% comment %} <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-tools me-2"></i>{% trans "Quick Actions" %}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'universal_schedule' %}" class="btn btn-primary">
+                            <i class="fas fa-calendar-week me-2"></i>{% trans "View Schedule" %}
+                        </a>
+                        <a href="{% url 'teacher_attendance' %}" class="btn btn-success">
+                            <i class="fas fa-check-square me-2"></i>{% trans "Mark Attendance" %}
+                        </a>
+                        <a href="{% url 'report' %}" class="btn btn-outline-success">
+                            <i class="fas fa-chart-line me-2"></i>{% trans "Reports" %}
+                        </a>
+                        <a href="/leave/manage/" class="btn btn-outline-warning">
+                            <i class="fas fa-file-alt me-2"></i>{% trans "View Requests" %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div> {% endcomment %}
+    </div>
+    {% endif %}
+
+    <!-- СТУДЕНТ ПАНЕЛИ -->
+    {% if role == 'STUDENT' %}
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="card-body text-white text-center">
+                    <i class="fas fa-percentage fa-3x mb-3"></i>
+                    <h4>{% trans "Attendance Rate" %}</h4>
+                    <h2 class="mb-0">{{ attendance_percentage|default:0 }}%</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <div class="card-body text-white text-center">
+                    <i class="fas fa-calendar-check fa-3x mb-3"></i>
+                    <h4>{% trans "Days Present" %}</h4>
+                    <h2 class="mb-0">{{ present_days|default:0 }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <div class="card-body text-white text-center">
+                    <i class="fas fa-times-circle fa-3x mb-3"></i>
+                    <h4>{% trans "Days Absent" %}</h4>
+                    <h2 class="mb-0">{{ absent_days|default:0 }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>{% trans "Today's Schedule" %}</h5>
+                </div>
+                <div class="card-body">
+                    {% if student_today_schedule %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>{% trans "Time" %}</th>
+                                        <th>{% trans "Subject" %}</th>
+                                        <th>{% trans "Teacher" %}</th>
+                                        <th>{% trans "Status" %}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for schedule in student_today_schedule %}
+                                    <tr>
+                                        <td>{{ schedule.start_time|time:"H:i" }} - {{ schedule.end_time|time:"H:i" }}</td>
+                                        <td>{{ schedule.subject.name }}</td>
+                                        <td>{{ schedule.subject.teacher.name }}</td>
+                                        <td>
+                                            {% if schedule.attendance_status %}
+                                                {% if schedule.attendance_status == 'Present' %}
+                                                    <span class="badge bg-success">{% trans "Present" %}</span>
+                                                {% elif schedule.attendance_status == 'Absent' %}
+                                                    <span class="badge bg-danger">{% trans "Absent" %}</span>
+                                                {% elif schedule.attendance_status == 'Excused' %}
+                                                    <span class="badge bg-warning">{% trans "Excused" %}</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="badge bg-secondary">{% trans "Not Marked" %}</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-calendar-times fa-3x mb-3"></i>
+                            <p>{% trans "No classes today" %}</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-tools me-2"></i>{% trans "Quick Actions" %}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'student_schedule' %}" class="btn btn-primary">
+                            <i class="fas fa-calendar-week me-2"></i>{% trans "My Schedule" %}
+                        </a>
+                        <a href="{% url 'submit_leave_request' %}" class="btn btn-warning">
+                            <i class="fas fa-file-alt me-2"></i>{% trans "Submit Request" %}
+                        </a>
+                        <a href="{% url 'my_leave_requests' %}" class="btn btn-info">
+                            <i class="fas fa-list me-2"></i>{% trans "My Requests" %}
+                        </a>
+                        <a href="{% url 'notifications' %}" class="btn btn-secondary">
+                            <i class="fas fa-bell me-2"></i>{% trans "Notifications" %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- АТА-ЭНЕ ПАНЕЛИ -->
+    {% if role == 'PARENT' %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-child me-2"></i>Балдарым</h5>
+                </div>
+                <div class="card-body">
+                    {% if my_children %}
+                        <div class="row g-3">
+                            {% for child in my_children %}
+                            <div class="col-md-6">
+                                <div class="card border-primary">
+                                    <div class="card-header bg-primary text-white">
+                                        <h6 class="mb-0">{{ child.name }} - {{ child.group.name }}</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row text-center">
+                                            <div class="col-4">
+                                                <h5 class="text-success">{{ child.present_count|default:0 }}</h5>
+                                                <small class="text-muted">Келген</small>
+                                            </div>
+                                            <div class="col-4">
+                                                <h5 class="text-danger">{{ child.absent_count|default:0 }}</h5>
+                                                <small class="text-muted">Келбеген</small>
+                                            </div>
+                                            <div class="col-4">
+                                                <h5 class="text-primary">{{ child.attendance_percentage|default:0 }}%</h5>
+                                                <small class="text-muted">Пайыз</small>
+                                            </div>
+                                        </div>
+                                        <div class="mt-3">
+                                            <a href="{% url 'universal_schedule' %}" class="btn btn-sm btn-primary me-2">
+                                                <i class="fas fa-calendar-week me-1"></i>Расписание
+                                            </a>
+                                            <a href="/leave/request/{{ child.id }}/" class="btn btn-sm btn-outline-warning">
+                                                <i class="fas fa-file-alt me-1"></i>Арыз берүү
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Бала маалыматтары жок</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ата-энелер үчүн билдирүүлөр -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-bell me-2"></i>Билдирүүлөр</h5>
+                </div>
+                <div class="card-body">
+                    {% if parent_notifications %}
+                        <div class="list-group">
+                            {% for notification in parent_notifications %}
+                            <div class="list-group-item {% if not notification.is_read %}list-group-item-warning{% endif %}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1">{{ notification.title }}</h6>
+                                        <p class="mb-1">{{ notification.message }}</p>
+                                        <small class="text-muted">{{ notification.created_at|date:"d F Y H:i" }}</small>
+                                    </div>
+                                    {% if not notification.is_read %}
+                                        <span class="badge bg-warning">Жаңы</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Билдирүүлөр жок</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Weekly Attendance Chart for Admin/Manager
+    {% if role == 'ADMIN' or role == 'MANAGER' %}
+    const chartCanvas = document.getElementById('weeklyAttendanceChart');
+    if (chartCanvas) {
+        const ctx = chartCanvas.getContext('2d');
+        
+        // Чыныгы data базадан келген маалымат
+        const weeklyData = {
+            labels: {{ weekly_attendance_data.labels|safe }},
+            datasets: [{
+                label: '{% trans "Present" %}',
+                data: {{ weekly_attendance_data.present|safe }},
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 3,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
+            }, {
+                label: '{% trans "Absent" %}',
+                data: {{ weekly_attendance_data.absent|safe }},
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 3,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
+            }, {
+                label: '{% trans "Excused" %}',
+                data: {{ weekly_attendance_data.excused|safe }},
+                backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                borderColor: 'rgba(255, 206, 86, 1)',
+                borderWidth: 3,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                pointBackgroundColor: 'rgba(255, 206, 86, 1)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
+            }]
+        };
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: weeklyData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                    },
+                    title: {
+                        display: false
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            stepSize: 10,
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        title: {
+                            display: true,
+                            text: '{% trans "Percentage of Total Students" %}'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: '{% trans "Date (Day)" %}'
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            }
+        });
+    }
+    {% endif %}
+});
+</script>
+{% endblock %}
