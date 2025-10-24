@@ -1,43 +1,14 @@
-# Python bytecode
+# Django
+*.pyc
 __pycache__/
-*.py[cod]
-*$py.class
-
-# Django stuff:
-*.log
 db.sqlite3
-db.sqlite3-journal
+/venv*/
+/env*/
+*.log
 
-# Static files
-staticfiles/
-
-# Media files
-media/profile_photos/
-
-# Environment files
-.env
-.venv
-env/
-venv/
-venv_new/
-ENV/
-env.bak/
-venv.bak/
-
-# PyCharm
+# IDE
+.vscode/
 .idea/
 
-# VS Code
-.vscode/
-
-# macOS
+# OS
 .DS_Store
-
-# Windows
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-
-# Migration files (optional - comment out if you want to keep them)
-# */migrations/*.py
-# !*/migrations/__init__.py
