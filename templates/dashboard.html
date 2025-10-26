@@ -7,6 +7,17 @@
 
 {% block extra_css %}
 <style>
+/* Dashboard Adaptive Styles */
+.dashboard-container {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
+.dashboard-content {
+    padding: 1rem;
+}
+
 /* Profile photo effects on dashboard */
 .profile-photo-dashboard:hover {
     transform: scale(1.05);
@@ -41,18 +52,128 @@
 .badge.bg-warning {
     animation: pulse 2s infinite;
 }
+
+/* Orange color for Late status */
+.text-orange {
+    color: #fd7e14 !important;
+}
+
+.bg-orange {
+    background-color: #fd7e14 !important;
+}
+
+/* Dashboard Cards Responsive */
+.dashboard-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+/* Mobile Responsive for Dashboard */
+@media (max-width: 768px) {
+    .dashboard-content {
+        padding: 0.5rem;
+    }
+    
+    .dashboard-cards {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .stat-card {
+        padding: 1rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    /* Chart responsive styles */
+    .chart-container {
+        position: relative;
+        width: 100%;
+        height: 250px !important; /* Fixed height for mobile */
+        padding: 0.5rem;
+        overflow: hidden;
+    }
+    
+    #weeklyAttendanceChart {
+        max-width: 100% !important;
+        height: 100% !important;
+        display: block;
+    }
+    
+    /* Ensure chart container doesn't overflow */
+    .card-body:has(#weeklyAttendanceChart) {
+        padding: 0.75rem !important;
+        overflow: hidden; /* Prevent overflow */
+    }
+    
+    /* Chart legend adjustments for mobile */
+    .chart-container canvas {
+        border-radius: 4px;
+    }
+    
+    .profile-photo-dashboard {
+        width: 50px !important;
+        height: 50px !important;
+    }
+    
+    .profile-photo-placeholder-dashboard {
+        width: 50px !important;
+        height: 50px !important;
+        font-size: 1rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-content {
+        padding: 0.25rem;
+    }
+    
+    .card-body {
+        padding: 0.75rem;
+    }
+    
+    .stat-card {
+        padding: 0.75rem;
+    }
+    
+    /* Extra small screens chart adjustments */
+    .chart-container {
+        height: 200px !important; /* Even smaller for very small screens */
+        padding: 0.25rem;
+    }
+    
+    .card-body:has(#weeklyAttendanceChart) {
+        padding: 0.5rem !important;
+    }
+    
+    #weeklyAttendanceChart {
+        border-radius: 4px;
+    }
+}
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- Колдонуучу маалыматтары -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center">
+<div class="dashboard-container">
+    <div class="dashboard-content">
+        <!-- Колдонуучу маалыматтары -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
                             <!-- Профил сүрөтү -->
                             <div class="me-3">
                                 <a href="{% url 'profile_view' %}" class="text-decoration-none">
@@ -187,7 +308,9 @@
                     </h5>
                 </div>
                 <div class="card-body p-4">
-                    <canvas id="weeklyAttendanceChart" height="80"></canvas>
+                    <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
+                        <canvas id="weeklyAttendanceChart" style="max-width: 100%; height: 100%;"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -233,6 +356,19 @@
                             <div class="progress-bar bg-danger" style="width: {{ today_absent_rate }}%"></div>
                         </div>
                         <small class="text-muted">{{ today_absent_rate }}%</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-orange" style="color: #fd7e14;">
+                                <i class="fas fa-clock me-1"></i>{% trans "Late" %}
+                            </span>
+                            <strong>{{ today_late }}</strong>
+                        </div>
+                        <div class="progress mb-2" style="height: 8px;">
+                            <div class="progress-bar" style="background-color: #fd7e14; width: {{ today_late_rate }}%"></div>
+                        </div>
+                        <small class="text-muted">{{ today_late_rate }}%</small>
                     </div>
                     
                     <div class="mb-3">
@@ -588,11 +724,11 @@
                                                 <button class="btn btn-sm btn-secondary" disabled>
                                                     <i class="fas fa-check me-1"></i>Аяктады
                                                 </button>
-                                                <a href="{% url 'universal_schedule' %}" class="btn btn-sm btn-outline-info" title="Расписаниени көрүү">
+                                                <a href="{% url 'unified_schedule' %}" class="btn btn-sm btn-outline-info" title="Расписаниени көрүү">
                                                     <i class="fas fa-eye me-1"></i>Көрүү
                                                 </a>
                                             {% else %}
-                                                <a href="{% url 'universal_schedule' %}" class="btn btn-sm btn-success">
+                                                <a href="{% url 'unified_schedule' %}" class="btn btn-sm btn-success">
                                                     <i class="fas fa-check me-1"></i>{% trans "Mark Attendance" %}
                                                 </a>
                                             {% endif %}
@@ -612,29 +748,9 @@
             </div>
         </div>
         
-        {% comment %} <div class="col-md-4">
-            <div class="card">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0"><i class="fas fa-tools me-2"></i>{% trans "Quick Actions" %}</h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <a href="{% url 'universal_schedule' %}" class="btn btn-primary">
-                            <i class="fas fa-calendar-week me-2"></i>{% trans "View Schedule" %}
-                        </a>
-                        <a href="{% url 'teacher_attendance' %}" class="btn btn-success">
-                            <i class="fas fa-check-square me-2"></i>{% trans "Mark Attendance" %}
-                        </a>
-                        <a href="{% url 'report' %}" class="btn btn-outline-success">
-                            <i class="fas fa-chart-line me-2"></i>{% trans "Reports" %}
-                        </a>
-                        <a href="/leave/manage/" class="btn btn-outline-warning">
-                            <i class="fas fa-file-alt me-2"></i>{% trans "View Requests" %}
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div> {% endcomment %}
+        <!-- ADMIN/MANAGER/TEACHER үчүн Quick Actions -->
+        {% if role == 'ADMIN' or role == 'MANAGER' or role == 'TEACHER' %}
+        {% endif %}
     </div>
     {% endif %}
 
@@ -722,7 +838,7 @@
             </div>
         </div>
         
-        <div class="col-md-4">
+        {% comment %} <div class="col-md-4">
             <div class="card">
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0"><i class="fas fa-tools me-2"></i>{% trans "Quick Actions" %}</h5>
@@ -742,9 +858,9 @@
                             <i class="fas fa-bell me-2"></i>{% trans "Notifications" %}
                         </a>
                     </div>
-                </div>
+                </div> 
             </div>
-        </div>
+        </div> {% endcomment %}
     </div>
     {% endif %}
 
@@ -781,10 +897,10 @@
                                             </div>
                                         </div>
                                         <div class="mt-3">
-                                            <a href="{% url 'universal_schedule' %}" class="btn btn-sm btn-primary me-2">
+                                            <a href="{% url 'unified_schedule' %}" class="btn btn-sm btn-primary me-2">
                                                 <i class="fas fa-calendar-week me-1"></i>Расписание
                                             </a>
-                                            <a href="/leave/request/{{ child.id }}/" class="btn btn-sm btn-outline-warning">
+                                            <a href="{% url 'submit_leave_request' %}" class="btn btn-sm btn-outline-warning">
                                                 <i class="fas fa-file-alt me-1"></i>Арыз берүү
                                             </a>
                                         </div>
@@ -834,7 +950,8 @@
         </div>
     </div>
     {% endif %}
-</div>
+    </div> <!-- .dashboard-content -->
+</div> <!-- .dashboard-container -->
 {% endblock %}
 
 {% block extra_js %}
@@ -853,55 +970,82 @@ document.addEventListener('DOMContentLoaded', function() {
             datasets: [{
                 label: '{% trans "Present" %}',
                 data: {{ weekly_attendance_data.present|safe }},
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 3,
+                backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                borderColor: 'rgba(34, 197, 94, 1)',
+                borderWidth: 2,
                 tension: 0.4,
                 fill: true,
-                pointRadius: 5,
-                pointHoverRadius: 7,
-                pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: 'rgba(34, 197, 94, 1)',
                 pointBorderColor: '#fff',
                 pointBorderWidth: 2
             }, {
                 label: '{% trans "Absent" %}',
                 data: {{ weekly_attendance_data.absent|safe }},
-                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                borderColor: 'rgba(255, 99, 132, 1)',
-                borderWidth: 3,
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                borderColor: 'rgba(239, 68, 68, 1)',
+                borderWidth: 2,
                 tension: 0.4,
                 fill: true,
-                pointRadius: 5,
-                pointHoverRadius: 7,
-                pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: 'rgba(239, 68, 68, 1)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
+            }, {
+                label: '{% trans "Late" %}',
+                data: {{ weekly_attendance_data.late|safe }},
+                backgroundColor: 'rgba(253, 126, 20, 0.1)',
+                borderColor: 'rgba(253, 126, 20, 1)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: 'rgba(253, 126, 20, 1)',
                 pointBorderColor: '#fff',
                 pointBorderWidth: 2
             }, {
                 label: '{% trans "Excused" %}',
                 data: {{ weekly_attendance_data.excused|safe }},
-                backgroundColor: 'rgba(255, 206, 86, 0.2)',
-                borderColor: 'rgba(255, 206, 86, 1)',
-                borderWidth: 3,
+                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                borderColor: 'rgba(245, 158, 11, 1)',
+                borderWidth: 2,
                 tension: 0.4,
                 fill: true,
-                pointRadius: 5,
-                pointHoverRadius: 7,
-                pointBackgroundColor: 'rgba(255, 206, 86, 1)',
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: 'rgba(245, 158, 11, 1)',
                 pointBorderColor: '#fff',
                 pointBorderWidth: 2
             }]
         };
         
-        new Chart(ctx, {
+        const chart = new Chart(ctx, {
             type: 'line',
             data: weeklyData,
             options: {
                 responsive: true,
-                maintainAspectRatio: true,
+                maintainAspectRatio: false, // Allow flexible aspect ratio
+                devicePixelRatio: window.devicePixelRatio || 1,
+                interaction: {
+                    intersect: false,
+                    mode: 'index',
+                },
                 plugins: {
                     legend: {
                         display: true,
-                        position: 'top',
+                        position: window.innerWidth < 768 ? 'bottom' : 'top', // Mobile legend at bottom
+                        labels: {
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            padding: window.innerWidth < 768 ? 10 : 20, // Less padding on mobile
+                            font: {
+                                size: window.innerWidth < 768 ? 10 : 12 // Smaller font on mobile
+                            },
+                            boxWidth: window.innerWidth < 768 ? 8 : 12 // Smaller legend boxes on mobile
+                        }
                     },
                     title: {
                         display: false
@@ -909,10 +1053,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     tooltip: {
                         mode: 'index',
                         intersect: false,
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        padding: 12,
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        titleColor: '#374151',
+                        bodyColor: '#374151',
+                        borderColor: 'rgba(209, 213, 219, 1)',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        padding: window.innerWidth < 768 ? 8 : 12, // Smaller tooltip padding on mobile
+                        displayColors: true,
+                        titleFont: {
+                            size: window.innerWidth < 768 ? 11 : 12
+                        },
+                        bodyFont: {
+                            size: window.innerWidth < 768 ? 10 : 11
+                        },
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y + '%';
+                            }
+                        }
                     }
                 },
                 scales: {
@@ -920,27 +1079,75 @@ document.addEventListener('DOMContentLoaded', function() {
                         beginAtZero: true,
                         max: 100,
                         ticks: {
-                            stepSize: 10,
+                            stepSize: window.innerWidth < 768 ? 25 : 20, // Fewer ticks on mobile
                             callback: function(value) {
                                 return value + '%';
-                            }
+                            },
+                            color: '#6B7280',
+                            font: {
+                                size: window.innerWidth < 768 ? 9 : 11 // Smaller font on mobile
+                            },
+                            maxTicksLimit: window.innerWidth < 768 ? 5 : 6 // Limit ticks on mobile
                         },
                         grid: {
-                            color: 'rgba(0, 0, 0, 0.05)'
+                            color: 'rgba(209, 213, 219, 0.3)',
+                            lineWidth: 1
+                        },
+                        border: {
+                            display: false
                         },
                         title: {
-                            display: true,
-                            text: '{% trans "Percentage of Total Students" %}'
+                            display: window.innerWidth >= 768, // Hide Y-axis title on mobile
+                            text: '{% trans "Percentage" %}',
+                            color: '#6B7280',
+                            font: {
+                                size: window.innerWidth < 768 ? 10 : 12,
+                                weight: 'normal'
+                            }
                         }
                     },
                     x: {
+                        ticks: {
+                            color: '#6B7280',
+                            font: {
+                                size: window.innerWidth < 768 ? 9 : 11 // Smaller font on mobile
+                            },
+                            maxRotation: window.innerWidth < 768 ? 45 : 0, // Rotate labels on mobile
+                            minRotation: window.innerWidth < 768 ? 45 : 0
+                        },
                         grid: {
+                            display: false
+                        },
+                        border: {
                             display: false
                         },
                         title: {
                             display: true,
-                            text: '{% trans "Date (Day)" %}'
+                            text: '{% trans "Days" %}',
+                            color: '#6B7280',
+                            font: {
+                                size: 12,
+                                weight: 'normal'
+                            }
                         }
+                    }
+                },
+                elements: {
+                    point: {
+                        radius: 4,
+                        hoverRadius: 6,
+                        borderWidth: 2,
+                        hoverBorderWidth: 3
+                    },
+                    line: {
+                        tension: 0.3,
+                        borderWidth: 2.5
+                    }
+                },
+                layout: {
+                    padding: {
+                        top: 10,
+                        bottom: 10
                     }
                 },
                 interaction: {
@@ -948,6 +1155,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     axis: 'x',
                     intersect: false
                 }
+            }
+        });
+        
+        // Handle window resize for responsive chart
+        window.addEventListener('resize', function() {
+            if (chart) {
+                // Update chart options based on new screen size
+                const isMobile = window.innerWidth < 768;
+                chart.options.plugins.legend.position = isMobile ? 'bottom' : 'top';
+                chart.options.plugins.legend.labels.padding = isMobile ? 10 : 20;
+                chart.options.plugins.legend.labels.font.size = isMobile ? 10 : 12;
+                chart.options.plugins.legend.labels.boxWidth = isMobile ? 8 : 12;
+                chart.options.scales.y.ticks.font.size = isMobile ? 9 : 11;
+                chart.options.scales.x.ticks.font.size = isMobile ? 9 : 11;
+                chart.options.scales.y.title.display = !isMobile;
+                chart.options.scales.x.ticks.maxRotation = isMobile ? 45 : 0;
+                chart.options.scales.x.ticks.minRotation = isMobile ? 45 : 0;
+                chart.update('resize');
             }
         });
     }

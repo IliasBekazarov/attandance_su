@@ -379,13 +379,15 @@ def dashboard(request):
             'total_present': stats['total_present'],
             'total_absent': stats['total_absent'],
             'overall_attendance_rate': stats['overall_attendance_rate'],
-            'weekly_attendance_data': stats['weekly_attendance_data']['json'],
+            'weekly_attendance_data': stats['weekly_attendance_data'],
             'today_total': stats['today_total'],
             'today_present': stats['today_present'],
             'today_absent': stats['today_absent'],
+            'today_late': stats['today_late'],
             'today_excused': stats['today_excused'],
             'today_present_rate': stats['today_present_rate'],
             'today_absent_rate': stats['today_absent_rate'],
+            'today_late_rate': stats['today_late_rate'],
             'today_excused_rate': stats['today_excused_rate'],
         })
         
@@ -888,13 +890,36 @@ def schedule_update(request):
 
 @login_required
 def student_schedule(request):
-    """Студенттин жумалык расписаниеси жана катышуу статистикасы"""
-    if request.user.userprofile.role != 'STUDENT':
-        messages.error(request, _('This function is for students only.'))
+    """Студенттин жумалык расписаниеси жана катышуу статистикасы (студент же ата-эне)"""
+    user_profile = request.user.userprofile
+    
+    # STUDENT же PARENT гана кире алат
+    if user_profile.role not in ['STUDENT', 'PARENT']:
+        messages.error(request, _('This function is for students and parents only.'))
         return redirect('dashboard')
     
-    try:
-        student = Student.objects.get(user=request.user)
+    # Студентти аныктоо
+    student = None
+    if user_profile.role == 'STUDENT':
+        try:
+            student = Student.objects.get(user=request.user)
+        except Student.DoesNotExist:
+            messages.error(request, 'Студент профили табылган жок.')
+            return redirect('dashboard')
+    
+    elif user_profile.role == 'PARENT':
+        # Ата-эне үчүн биринчи балын алуу (кийинчерээк көптү тандоо мүмкүнчүлүгүн кошсок болот)
+        linked_students = user_profile.parent_profiles.all()
+        if linked_students.exists():
+            student = linked_students.first()  # Биринчи балды алуу
+            print(f"DEBUG: Parent {user_profile.user.username} viewing schedule for student {student.name}")
+        else:
+            messages.error(request, 'Сизге эч кандай студент байланышкан эмес.')
+            return redirect('dashboard')
+    
+    if not student:
+        messages.error(request, 'Студент табылган жок.')
+        return redirect('dashboard')
         
         # Жумалык расписание үчүн күндөр
         days = [
@@ -988,10 +1013,6 @@ def student_schedule(request):
         }
         
         return render(request, 'modern_student_schedule.html', context)
-        
-    except Student.DoesNotExist:
-        messages.error(request, _('Student information not found!'))
-        return redirect('dashboard')
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -1170,24 +1191,60 @@ def mark_group_attendance(request, schedule_id):
         messages.error(request, 'Бул функция мугалимдер үчүн гана.')
         return redirect('dashboard')
     
+    from datetime import date
+    from .models import LeaveRequest
+    
     schedule = get_object_or_404(Schedule, id=schedule_id)
     students = Student.objects.filter(group=schedule.group)
+    
+    # Бүгүнкү күндө approved leave алган студенттерди табуу
+    today = date.today()
+    students_with_leave = {}
+    
+    for student in students:
+        # Ошол студенттин бүгүнкү күнгө approved leave request бар болсо
+        approved_leave = LeaveRequest.objects.filter(
+            student=student,
+            status='APPROVED',
+            start_date__lte=today,
+            end_date__gte=today
+        ).first()
+        
+        if approved_leave:
+            students_with_leave[student.id] = {
+                'leave_request': approved_leave,
+                'has_leave': True,
+                'message': f"Уруксат алган: {approved_leave.start_date} - {approved_leave.end_date}"
+            }
+        else:
+            students_with_leave[student.id] = {'has_leave': False}
     
     if request.method == 'POST':
         for student in students:
             status = request.POST.get(f'status_{student.id}')
             if status:
-                Attendance.objects.update_or_create(
+                attendance, created = Attendance.objects.update_or_create(
                     student=student,
-                    subject=schedule.subject,  # Subject кошуу
+                    subject=schedule.subject,
                     schedule=schedule,
                     date=date.today(),
-                    defaults={'status': status, 'created_by': request.user}
+                    defaults={
+                        'status': status, 
+                        'created_by': request.user,
+                        'student_name': student.name,
+                        'subject_name': schedule.subject.subject_name,
+                        'is_active': True
+                    }
                 )
         messages.success(request, 'Катышуу белгиленди.')
         return redirect('teacher_schedule')
     
-    context = {'schedule': schedule, 'students': students}
+    context = {
+        'schedule': schedule, 
+        'students': students,
+        'students_with_leave': students_with_leave,
+        'today': today
+    }
     return render(request, 'mark_group_attendance.html', context)
 
 @login_required
@@ -1465,15 +1522,34 @@ def schedule(request):
 
 @login_required
 def submit_leave_request(request):
-    """Студент бошотуу сурамын жөнөтөт"""
-    if request.user.userprofile.role != 'STUDENT':
-        messages.error(request, 'Бул функция студенттер үчүн гана.')
+    """Студент же ата-эне бошотуу сурамын жөнөтөт"""
+    user_profile = request.user.userprofile
+    
+    if user_profile.role not in ['STUDENT', 'PARENT']:
+        messages.error(request, 'Бул функция студенттер жана ата-энелер үчүн гана.')
         return redirect('dashboard')
     
-    try:
-        student = Student.objects.get(user=request.user)
-    except Student.DoesNotExist:
-        messages.error(request, 'Студент профили табылган жок.')
+    # Студентти аныктоо
+    student = None
+    if user_profile.role == 'STUDENT':
+        try:
+            student = Student.objects.get(user=request.user)
+        except Student.DoesNotExist:
+            messages.error(request, 'Студент профили табылган жок.')
+            return redirect('dashboard')
+    
+    elif user_profile.role == 'PARENT':
+        # Ата-эне үчүн биринчи балын алуу
+        linked_students = user_profile.parent_profiles.all()
+        if linked_students.exists():
+            student = linked_students.first()  # Биринчи балды алуу
+            print(f"DEBUG: Parent {user_profile.user.username} submitting leave for student {student.name}")
+        else:
+            messages.error(request, 'Сизге эч кандай студент байланышкан эмес.')
+            return redirect('dashboard')
+    
+    if not student:
+        messages.error(request, 'Студент табылган жок.')
         return redirect('dashboard')
     
     if request.method == 'POST':
@@ -1495,17 +1571,30 @@ def submit_leave_request(request):
 
 @login_required
 def my_leave_requests(request):
-    """Студенттин өз бошотуу сурамдарын көрүү"""
-    if request.user.userprofile.role != 'STUDENT':
-        messages.error(request, 'Бул функция студенттер үчүн гана.')
+    """Студенттин же ата-эненин бошотуу сурамдарын көрүү"""
+    user_profile = request.user.userprofile
+    
+    if user_profile.role not in ['STUDENT', 'PARENT']:
+        messages.error(request, 'Бул функция студенттер жана ата-энелер үчүн гана.')
         return redirect('dashboard')
     
-    try:
-        student = Student.objects.get(user=request.user)
-        leave_requests = LeaveRequest.objects.filter(student=student).order_by('-created_at')
-    except Student.DoesNotExist:
-        leave_requests = []
-        messages.error(request, 'Студент профили табылган жок.')
+    leave_requests = []
+    
+    if user_profile.role == 'STUDENT':
+        try:
+            student = Student.objects.get(user=request.user)
+            leave_requests = LeaveRequest.objects.filter(student=student).order_by('-created_at')
+        except Student.DoesNotExist:
+            messages.error(request, 'Студент профили табылган жок.')
+    
+    elif user_profile.role == 'PARENT':
+        # Ата-эне балдарынын бошотуу сурамдарын көрөт
+        linked_students = user_profile.parent_profiles.all()
+        if linked_students.exists():
+            student_ids = [student.id for student in linked_students]
+            leave_requests = LeaveRequest.objects.filter(student_id__in=student_ids).order_by('-created_at')
+        else:
+            messages.error(request, 'Сизге эч кандай студент байланышкан эмес.')
     
     return render(request, 'leave/my_requests.html', {'leave_requests': leave_requests})
 

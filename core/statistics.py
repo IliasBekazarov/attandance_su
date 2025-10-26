@@ -56,14 +56,16 @@ def get_unified_statistics(start_date=None, end_date=None, group_id=None, studen
     today_total = today_attendances.count()
     today_present = today_attendances.filter(status='Present').count()
     today_absent = today_attendances.filter(status='Absent').count()
+    today_late = today_attendances.filter(status='Late').count()
     today_excused = today_attendances.filter(status='Excused').count()
     
     if today_total > 0:
         today_present_rate = round((today_present / today_total) * 100, 1)
         today_absent_rate = round((today_absent / today_total) * 100, 1)
+        today_late_rate = round((today_late / today_total) * 100, 1)
         today_excused_rate = round((today_excused / today_total) * 100, 1)
     else:
-        today_present_rate = today_absent_rate = today_excused_rate = 0
+        today_present_rate = today_absent_rate = today_late_rate = today_excused_rate = 0
     
     # Группалар боюнча статистика
     groups_stats = []
@@ -109,7 +111,8 @@ def get_unified_statistics(start_date=None, end_date=None, group_id=None, studen
         overall_attendance_rate = 0
     
     # Соңку 7 күндүн тренди
-    weekly_data = get_weekly_trend_data(today, total_students)
+    weekly_trend_result = get_weekly_trend_data(today, total_students)
+    weekly_data = weekly_trend_result['json']
     
     # Эң көп жок болгон студенттер (топ 10)
     top_absent_students = Student.objects.annotate(
@@ -141,9 +144,11 @@ def get_unified_statistics(start_date=None, end_date=None, group_id=None, studen
         'today_total': today_total,
         'today_present': today_present,
         'today_absent': today_absent,
+        'today_late': today_late,
         'today_excused': today_excused,
         'today_present_rate': today_present_rate,
         'today_absent_rate': today_absent_rate,
+        'today_late_rate': today_late_rate,
         'today_excused_rate': today_excused_rate,
         
         # Группалар статистикасы
@@ -154,7 +159,10 @@ def get_unified_statistics(start_date=None, end_date=None, group_id=None, studen
         'overall_attendance_rate': overall_attendance_rate,
         
         # Тренд маалыматтары
-        'weekly_attendance_data': weekly_data,
+        'weekly_attendance_data': {
+            **weekly_data,
+            'daily_trend_json': weekly_trend_result['daily_trend_json']
+        },
         'top_absent_students': top_absent_students,
         
         # Кошумча маалыматтар
@@ -171,6 +179,7 @@ def get_weekly_trend_data(today, total_students_count):
         'labels': [],
         'present': [],
         'absent': [],
+        'late': [],
         'excused': [],
         'daily_trend': []  # Report үчүн
     }
@@ -182,15 +191,17 @@ def get_weekly_trend_data(today, total_students_count):
         day_total = day_attendances.count()
         day_present = day_attendances.filter(status='Present').count()
         day_absent = day_attendances.filter(status='Absent').count()
+        day_late = day_attendances.filter(status='Late').count()
         day_excused = day_attendances.filter(status='Excused').count()
         
         # Жалпы студенттерден пайыз эсептөө (Dashboard үчүн)
         if total_students_count > 0:
             present_percent = round((day_present / total_students_count) * 100, 1)
             absent_percent = round((day_absent / total_students_count) * 100, 1)
+            late_percent = round((day_late / total_students_count) * 100, 1)
             excused_percent = round((day_excused / total_students_count) * 100, 1)
         else:
-            present_percent = absent_percent = excused_percent = 0
+            present_percent = absent_percent = late_percent = excused_percent = 0
         
         # Күндүк пайыз (Report үчүн)
         if day_total > 0:
@@ -210,6 +221,7 @@ def get_weekly_trend_data(today, total_students_count):
         weekly_data['labels'].append(final_label)
         weekly_data['present'].append(present_percent)
         weekly_data['absent'].append(absent_percent)
+        weekly_data['late'].append(late_percent)
         weekly_data['excused'].append(excused_percent)
         
         # Report үчүн daily trend
@@ -226,6 +238,7 @@ def get_weekly_trend_data(today, total_students_count):
         'labels': json.dumps(weekly_data['labels']),
         'present': json.dumps(weekly_data['present']),
         'absent': json.dumps(weekly_data['absent']),
+        'late': json.dumps(weekly_data['late']),
         'excused': json.dumps(weekly_data['excused'])
     }
     

@@ -55,12 +55,18 @@ def unified_schedule(request):
     # АТА-ЭНЕ үчүн - Балдарынын группаларын көрө алат
     elif user_profile.role == 'PARENT':
         # Ата-энелер өз балдарынын группаларын көрө алат
-        linked_students = user_profile.students.all()
+        linked_students = user_profile.parent_profiles.all()
+        print(f"DEBUG: Parent {user_profile.user.username} has {linked_students.count()} linked students")
+        for student in linked_students:
+            print(f"DEBUG: - Student: {student.name} in group {student.group.name if student.group else 'No group'}")
+        
         if linked_students.exists():
             context.update({
                 'linked_students': linked_students,
                 'is_restricted_view': True,
+                'user_role': 'PARENT',  # JavaScript үчүн керек
             })
+            print(f"DEBUG: Parent context prepared with {linked_students.count()} students")
         else:
             messages.warning(request, 'Сизге эч кандай студент байланышкан эмес.')
             return redirect('dashboard')
@@ -134,7 +140,8 @@ def get_schedule_data(request):
     
     elif user_profile.role == 'PARENT':
         # Ата-энелер балдарынын группаларын гана көрө алат
-        linked_groups = [student.group.id for student in user_profile.students.all() if student.group]
+        linked_groups = [student.group.id for student in user_profile.parent_profiles.all() if student.group]
+        print(f"DEBUG: Parent {user_profile.user.username} linked groups: {linked_groups}")
         if group_id and int(group_id) not in linked_groups:
             return JsonResponse({'error': 'Сизде бул группанын расписаниесин көрүү укугу жок'}, status=403)
     
@@ -196,12 +203,62 @@ def get_schedule_data(request):
                 )
                 can_mark_today = teacher_can_mark
         
+        # Attendance маалыматын алуу (STUDENT же PARENT үчүн)
+        attendance_status = None
+        attendance_text = None
+        
+        if user_profile.role in ['STUDENT', 'PARENT']:
+            # Кайсы студенттин attendance'ын алуу керекпиз?
+            target_student = None
+            
+            if user_profile.role == 'STUDENT':
+                try:
+                    target_student = Student.objects.get(user=request.user)
+                except Student.DoesNotExist:
+                    pass
+            elif user_profile.role == 'PARENT':
+                # Ата-эне үчүн биринчи баланын attendance'ы
+                linked_students = user_profile.parent_profiles.all()
+                if linked_students.exists():
+                    target_student = linked_students.first()
+            
+            if target_student:
+                # Соңку аптадагы attendance табуу
+                # date и timedelta уже импортированы вверху файла
+                today = date.today()
+                week_start = today - timedelta(days=today.weekday())  # Дүйшөмбү
+                week_end = week_start + timedelta(days=6)  # Жекшемби
+                
+                from core.models import Attendance
+                latest_attendance = Attendance.objects.filter(
+                    student=target_student,
+                    subject=schedule.subject,
+                    date__range=[week_start, week_end]
+                ).order_by('-date').first()
+                
+                if latest_attendance:
+                    attendance_status = latest_attendance.status
+                    if attendance_status == 'Present':
+                        attendance_text = 'Катышкан'
+                    elif attendance_status == 'Absent':  
+                        attendance_text = 'Катышпаган'
+                    elif attendance_status == 'Late':
+                        attendance_text = 'Кечиккен'
+                    else:
+                        attendance_text = 'Белгилене элек'
+                else:
+                    attendance_text = 'Белгилене элек'
+                    
+                print(f"DEBUG: Attendance for {target_student.name} in {schedule.subject.subject_name}: {attendance_text}")
+
         schedule_data[day][time_slot_id] = {
             'id': schedule.id,
             'subject': schedule.subject.subject_name,
             'teacher': schedule.teacher.name if schedule.teacher else schedule.subject.teacher.name,
             'room': schedule.room or 'Кабинет белгиленген эмес',
             'group': schedule.group.name,
+            'attendance_status': attendance_status,  # Кошулду
+            'attendance_text': attendance_text,       # Кошулду
             'time_slot': {
                 'id': schedule.time_slot.id,
                 'name': schedule.time_slot.name,
@@ -225,13 +282,12 @@ def get_schedule_data(request):
             } for ts in time_slots
         ],
         'days': {
-            'Monday': 'Дүйшөмбү',
-            'Tuesday': 'Шейшемби', 
-            'Wednesday': 'Шаршемби',
-            'Thursday': 'Бейшемби',
-            'Friday': 'Жума',
-            'Saturday': 'Ишемби',
-            'Sunday': 'Жекшемби',
+            'Monday': 'Monday',
+            'Tuesday': 'Tuesday', 
+            'Wednesday': 'Wednesday',
+            'Thursday': 'Thursday',
+            'Friday': 'Friday',
+            'Saturday': 'Saturday',
         },
         'user_permissions': {
             'can_edit': user_profile.role in ['ADMIN', 'MANAGER'],

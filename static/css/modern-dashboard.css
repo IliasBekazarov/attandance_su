@@ -889,7 +889,7 @@ body {
 
 /* Content Wrapper */
 .content-wrapper {
-    padding: 20px 32px;
+    padding: 100px 32px 32px 32px;
 }
 
 /* Hide classic navbar when user is authenticated */

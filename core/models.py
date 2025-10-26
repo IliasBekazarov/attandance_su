@@ -155,13 +155,12 @@ class TimeSlot(models.Model):
 
 class Schedule(models.Model):
     DAY_CHOICES = [
-        ('Monday', 'Дүйшөмбү'),
-        ('Tuesday', 'Шейшемби'),
-        ('Wednesday', 'Шаршемби'),
-        ('Thursday', 'Бейшемби'),
-        ('Friday', 'Жума'),
-        ('Saturday', 'Ишемби'),
-        ('Sunday', 'Жекшемби'),  # Жекшемби кошулду
+        ('Monday', 'Monday'),
+        ('Tuesday', 'Tuesday'),
+        ('Wednesday', 'Wednesday'),
+        ('Thursday', 'Thursday'),
+        ('Friday', 'Friday'),
+        ('Saturday', 'Saturday'),
     ]
     
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, verbose_name="Сабак")
@@ -239,8 +238,8 @@ class Attendance(models.Model):
         ('Late', 'Кечикти'),
         ('Excused', 'Уруксат менен жок'),
     )
-    student = models.ForeignKey(Student, on_delete=models.CASCADE)
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    student = models.ForeignKey(Student, on_delete=models.SET_NULL, null=True, blank=True)
+    subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, null=True, blank=True)
     schedule = models.ForeignKey(Schedule, on_delete=models.SET_NULL, null=True, blank=True)
     date = models.DateField()
     status = models.CharField(max_length=10, choices=STATUS_CHOICES)
@@ -249,9 +248,24 @@ class Attendance(models.Model):
     marked_at = models.DateTimeField(auto_now=True, verbose_name='Белгиленген убакыт')
     leave_request = models.ForeignKey(LeaveRequest, on_delete=models.SET_NULL, null=True, blank=True, 
                                      verbose_name='Байланышкан бошотуу сурамы')
+    is_active = models.BooleanField(default=True, verbose_name="Активдүү")
+    
+    # Attendance маалыматтарын сактоо үчүн
+    student_name = models.CharField(max_length=255, blank=True, verbose_name="Студенттин аты")
+    subject_name = models.CharField(max_length=255, blank=True, verbose_name="Сабактын аты")
 
     def __str__(self):
-        return f"{self.student.name} - {self.subject.subject_name} - {self.date}"
+        student_name = self.student_name if self.student_name else (self.student.name if self.student else "Белгисиз студент")
+        subject_name = self.subject_name if self.subject_name else (self.subject.subject_name if self.subject else "Белгисиз сабак")
+        return f"{student_name} - {subject_name} - {self.date}"
+        
+    def save(self, *args, **kwargs):
+        # Attendance сакталганда студент жана сабак аттарын сактап калуу
+        if self.student and not self.student_name:
+            self.student_name = self.student.name
+        if self.subject and not self.subject_name:
+            self.subject_name = self.subject.subject_name
+        super().save(*args, **kwargs)
         
     class Meta:
         unique_together = ['student', 'subject', 'date']

@@ -11,7 +11,7 @@
                     ✅ Баарын окулган деп белгилөө
                 </a>
             {% endif %}
-            {% if request.user.userprofile.role in 'ADMIN,MANAGER' %}
+            {% if request.user.userprofile.role == 'ADMIN' or request.user.userprofile.role == 'MANAGER' %}
                 <a href="{% url 'send_bulk_notification' %}" class="btn btn-sm btn-success ms-2">
                     ➕ Жаңы билдирме жөнөтүү
                 </a>

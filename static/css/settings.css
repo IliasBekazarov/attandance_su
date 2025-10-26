@@ -22,11 +22,11 @@
     border-radius: 8px;
     transition: var(--transition);
     border: 1px solid var(--border-color);
-    background-color: var(--bs-light);
+    background-color: #007fff87;
 }
 
 .language-selector .form-check-label:hover {
-    background-color: var(--hover-bg);
+    background-color: #0080ffa8;
     border-color: var(--primary-color);
     transform: translateY(-2px);
 }
@@ -66,6 +66,7 @@
 .detail-item, .info-item {
     font-size: 0.95rem;
     line-height: 1.6;
+    background: #007bff8f;   
 }
 
 .current-language {
