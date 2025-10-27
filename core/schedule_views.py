@@ -592,11 +592,31 @@ def get_lesson_students(request):
                 date=today
             ).first()
             
-            # Student атын алуу
+            # Student атын алуу (бардык варианттарды текшерүү)
+            student_name = ""
             if student.user:
-                student_name = f"{student.user.last_name} {student.user.first_name}"
-            else:
-                student_name = student.name
+                # User объектисинен аты
+                first_name = (student.user.first_name or "").strip()
+                last_name = (student.user.last_name or "").strip()
+                if first_name and last_name:
+                    student_name = f"{last_name} {first_name}"
+                elif first_name:
+                    student_name = first_name
+                elif last_name:
+                    student_name = last_name
+                elif student.user.username:
+                    # User аттары бош болсо, username колдонобуз
+                    student_name = student.user.username
+            
+            # Эгер User объектисинен ат алынбаса же user жок болсо, student.name колдонобуз
+            if not student_name or student_name.strip() == "":
+                student_name = student.name or f"Студент #{student.id}"
+            
+            # Эгер дагы деле аты жок болсо, ID колдонобуз
+            if not student_name or student_name.strip() == "":
+                student_name = f"Студент #{student.id}"
+            
+            print(f"DEBUG: Student ID={student.id}, final name='{student_name}'")  # Debug log
             
             students_data.append({
                 'id': student.id,

@@ -482,8 +482,10 @@
     /* === ATTENDANCE MODAL === */
     .attendance-modal-content {
         max-width: 700px;
-        max-height: 85vh;
+        max-height: 90vh;
         overflow-y: auto;
+        display: flex;
+        flex-direction: column;
     }
 
     .lesson-info {
@@ -492,6 +494,7 @@
         border-radius: 8px;
         margin-bottom: 20px;
         border-left: 4px solid #667eea;
+        flex-shrink: 0;
     }
 
     .lesson-info h3 {
@@ -507,65 +510,84 @@
     }
 
     .students-list {
-        max-height: 400px;
+        flex: 1;
+        min-height: 300px;
+        max-height: 50vh;
         overflow-y: auto;
+        overflow-x: hidden;
+        padding-right: 5px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: #fafafa;
     }
 
     .student-item {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        padding: 15px;
-        background: #f8fafc;
-        margin-bottom: 10px;
+        align-items: flex-start;
+        padding: 12px 15px;
+        background: white;
+        margin: 8px 5px;
         border-radius: 8px;
         border: 1px solid #e2e8f0;
         transition: all 0.2s ease;
         flex-direction: column;
-        align-items: flex-start;
+        min-height: auto;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
     .student-item:hover {
         background: #edf2f7;
         border-color: #cbd5e0;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
 
     .student-name {
         font-weight: 600;
         color: #2d3748;
         flex: 1;
-        font-size: 0.9rem;
+        font-size: 0.95rem;
         width: 100%;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
+        line-height: 1.3;
     }
 
     .marked-info {
         color: #38a169;
-        font-size: 0.75rem;
+        font-size: 0.8rem;
         margin-bottom: 8px;
         background: #f0fff4;
-        padding: 4px 8px;
-        border-radius: 4px;
+        padding: 6px 10px;
+        border-radius: 6px;
         border: 1px solid #9ae6b4;
+        display: block;
+        width: 100%;
+        text-align: center;
     }
 
     .marked-info-container {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 8px;
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        margin-bottom: 10px;
+        gap: 8px;
     }
 
     .marked-info-container .btn {
-        font-size: 0.7rem;
-        padding: 2px 6px;
+        font-size: 0.75rem;
+        padding: 6px 12px;
+        align-self: center;
+        min-width: 120px;
     }
 
     .attendance-buttons {
-        display: flex;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
         gap: 8px;
         width: 100%;
-        justify-content: flex-end;
+        margin-top: 5px;
     }
 
     .attendance-buttons.disabled {
@@ -574,7 +596,7 @@
     }
 
     .status-btn {
-        padding: 8px 12px;
+        padding: 10px 8px;
         border: none;
         border-radius: 6px;
         cursor: pointer;
@@ -582,6 +604,12 @@
         font-weight: 600;
         transition: all 0.3s ease;
         border: 2px solid transparent;
+        text-align: center;
+        white-space: nowrap;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .status-btn.present {
@@ -622,9 +650,10 @@
         grid-template-columns: repeat(3, 1fr);
         gap: 15px;
         margin: 20px 0;
-        padding: 20px;
+        padding: 15px;
         background: #f7fafc;
         border-radius: 8px;
+        flex-shrink: 0;
     }
 
     .summary-item {
@@ -856,12 +885,58 @@
         
         .modal-content {
             width: 95%;
-            margin: 10% auto;
-            padding: 20px;
+            margin: 5% auto;
+            padding: 15px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .attendance-modal-content {
+            max-width: 95%;
+            max-height: 85vh;
+            margin: 5% auto;
+            padding: 15px;
         }
         
         .attendance-summary {
             grid-template-columns: 1fr;
+            gap: 10px;
+            padding: 10px;
+        }
+        
+        .students-list {
+            max-height: 40vh;
+            min-height: 200px;
+        }
+        
+        .student-item {
+            padding: 10px;
+            margin: 6px 3px;
+        }
+        
+        .student-name {
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+        
+        .attendance-buttons {
+            gap: 6px;
+        }
+        
+        .status-btn {
+            font-size: 0.75rem;
+            padding: 8px 4px;
+            min-height: 40px;
+        }
+        
+        .modal-buttons {
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .modal-btn {
+            width: 100%;
+            padding: 12px;
         }
     }
 
@@ -898,6 +973,109 @@
         /* Hide scroll indicator on very small screens to save space */
         #scheduleContent::after {
             display: none;
+        }
+        
+        /* Enhanced mobile attendance modal */
+        .attendance-modal-content {
+            max-width: 98%;
+            max-height: 92vh;
+            margin: 2% auto;
+            padding: 10px;
+        }
+        
+        .modal-header {
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .modal-title {
+            font-size: 1.1rem;
+        }
+        
+        .lesson-info {
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .lesson-info h3 {
+            font-size: 1rem;
+            margin-bottom: 8px;
+        }
+        
+        .lesson-info p {
+            font-size: 0.8rem;
+            margin: 4px 0;
+        }
+        
+        .students-list {
+            max-height: 35vh;
+            min-height: 150px;
+            border-radius: 6px;
+        }
+        
+        .student-item {
+            padding: 8px;
+            margin: 4px 2px;
+            border-radius: 6px;
+        }
+        
+        .student-name {
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+            line-height: 1.2;
+        }
+        
+        .attendance-buttons {
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 4px;
+            margin-top: 8px;
+        }
+        
+        .status-btn {
+            font-size: 0.7rem;
+            padding: 6px 2px;
+            min-height: 36px;
+            border-radius: 4px;
+        }
+        
+        .marked-info {
+            font-size: 0.7rem;
+            padding: 4px 6px;
+            margin-bottom: 6px;
+        }
+        
+        .marked-info-container .btn {
+            font-size: 0.65rem;
+            padding: 4px 8px;
+            min-width: 100px;
+        }
+        
+        .attendance-summary {
+            padding: 8px;
+            margin: 10px 0;
+            gap: 8px;
+        }
+        
+        .summary-item {
+            padding: 10px;
+        }
+        
+        .summary-number {
+            font-size: 1.5rem;
+        }
+        
+        .summary-label {
+            font-size: 0.75rem;
+        }
+        
+        .modal-buttons {
+            margin-top: 15px;
+            gap: 6px;
+        }
+        
+        .modal-btn {
+            padding: 10px;
+            font-size: 0.85rem;
         }
     }
 
@@ -1195,7 +1373,7 @@
 <div id="attendanceModal" class="modal">
     <div class="modal-content attendance-modal-content">
         <div class="modal-header">
-            <h3 class="modal-title">Келүү-кетүү белгилөө</h3>
+            <h3 class="modal-title">Marking students</h3>
             <button class="close-btn" onclick="closeAttendanceModal()">&times;</button>
         </div>
         
@@ -1210,21 +1388,21 @@
         <div class="attendance-summary" id="attendanceSummary">
             <div class="summary-item summary-present">
                 <div class="summary-number" id="presentCount">0</div>
-                <div class="summary-label">Келди</div>
+                <div class="summary-label">Present</div>
             </div>
             <div class="summary-item summary-late">
                 <div class="summary-number" id="lateCount">0</div>
-                <div class="summary-label">Кечикти</div>
+                <div class="summary-label">Late</div>
             </div>
             <div class="summary-item summary-absent">
                 <div class="summary-number" id="absentCount">0</div>
-                <div class="summary-label">Жок</div>
+                <div class="summary-label">Absent</div>
             </div>
         </div>
         
         <div class="modal-buttons">
-            <button type="button" class="modal-btn btn-secondary" onclick="closeAttendanceModal()">Жабуу</button>
-            <button type="button" class="modal-btn btn-primary" onclick="saveAttendance()">Сактоо</button>
+            <button type="button" class="modal-btn btn-secondary" onclick="closeAttendanceModal()">Close</button>
+            <button type="button" class="modal-btn btn-primary" onclick="saveAttendance()">Save</button>
         </div>
     </div>
 </div>
@@ -1247,16 +1425,16 @@
                 <label class="form-label">Жаңы статус:</label>
                 <div class="status-buttons-edit">
                     <button type="button" class="status-btn-edit present" onclick="selectEditStatus('Present')">
-                        ✅ Келди
+                        ✅ Present
                     </button>
                     <button type="button" class="status-btn-edit late" onclick="selectEditStatus('Late')">
-                        ⏰ Кечикти
+                        ⏰ Late
                     </button>
                     <button type="button" class="status-btn-edit absent" onclick="selectEditStatus('Absent')">
-                        ❌ Жок
+                        ❌ Absent
                     </button>
                     <button type="button" class="status-btn-edit excused" onclick="selectEditStatus('Excused')">
-                        📝 Уруксат менен
+                        📝 Excused
                     </button>
                 </div>
             </div>
@@ -1768,8 +1946,34 @@ function displayStudentsList(students) {
     
     currentAttendanceData = {};
     
+    // Debug: студенттердин данныйларын текшерүү
+    console.log('Students data received:', students);
+    
     students.forEach((student, index) => {
+        // Debug: ар бир студенттин данныйларын текшерүү
+        console.log(`Student ${index + 1}:`, student);
+        console.log(`Student name: "${student.name || student.full_name || student.user?.name || 'NO NAME'}"`);
+        
         currentAttendanceData[student.id] = student.current_status || 'Present';
+        // Студенттин атын аныктоо (бардык мүмкүн болгон атрибуттарды текшерүү)
+        let studentName = '';
+        
+        // Ар кандай варианттарды текшерүү
+        if (student.name && student.name.trim() !== '') {
+            studentName = student.name.trim();
+        } else if (student.full_name && student.full_name.trim() !== '') {
+            studentName = student.full_name.trim();
+        } else if (student.user && student.user.name && student.user.name.trim() !== '') {
+            studentName = student.user.name.trim();
+        } else if (student.user && student.user.first_name && student.user.last_name) {
+            studentName = `${student.user.last_name} ${student.user.first_name}`.trim();
+        } else if (student.user && student.user.username) {
+            studentName = student.user.username;
+        } else {
+            studentName = `Студент #${student.id}`;
+        }
+        
+        console.log(`Final student name for ID ${student.id}: "${studentName}"`);
         
         const studentDiv = document.createElement('div');
         studentDiv.className = 'student-item';
@@ -1778,10 +1982,10 @@ function displayStudentsList(students) {
         const isMarked = student.is_marked;
         const markedInfo = isMarked ? 
             `<div class="marked-info-container">
-                <small class="marked-info">✅ Белгиленген: ${student.marked_at} (${student.marked_by})</small>
+                <small class="marked-info">✅ Marked: ${student.marked_at} (${student.marked_by})</small>
                 <button type="button" class="btn btn-sm btn-warning ms-2" 
-                        onclick="showEditAttendance(${student.id}, '${student.name}', '${student.current_status || ''}', ${student.attendance_id || 0}, '${lessonId}')">
-                    <i class="fas fa-edit"></i> Өзгөртүү
+                        onclick="showEditAttendance(${student.id}, '${studentName}', '${student.current_status || ''}', ${student.attendance_id || 0}, '${lessonId}')">
+                    <i class="fas fa-edit"></i> Edit
                 </button>
             </div>` : 
             '';
@@ -1792,22 +1996,22 @@ function displayStudentsList(students) {
         
         studentDiv.innerHTML = `
             <div class="student-name">
-                ${index + 1}. ${student.name}
+                ${index + 1}. ${studentName}
                 ${isMarked ? ' 🔒' : ''}
             </div>
             ${markedInfo}
             <div class="${buttonsClass}">
                 <button class="status-btn present ${student.current_status === 'Present' ? 'active' : ''}" 
                         onclick="setAttendanceStatus(${student.id}, 'Present')" ${buttonsDisabled}>
-                     Келди
+                     Present
                 </button>
                 <button class="status-btn late ${student.current_status === 'Late' ? 'active' : ''}" 
                         onclick="setAttendanceStatus(${student.id}, 'Late')" ${buttonsDisabled}>
-                    Кечикти
+                    Late
                 </button>
                 <button class="status-btn absent ${student.current_status === 'Absent' ? 'active' : ''}" 
                         onclick="setAttendanceStatus(${student.id}, 'Absent')" ${buttonsDisabled}>
-                    Жок
+                    Absent
                 </button>
             </div>
         `;
@@ -1820,7 +2024,7 @@ function setAttendanceStatus(studentId, status) {
     // Эгер баскыч disabled болсо, аракетти токтотуу
     const button = event.target;
     if (button.disabled) {
-        showError('Бул студенттин attendance мурда белгиленген. Өзгөртүүгө болбойт.');
+        showError('This student\'s attendance has already been marked. Cannot be changed.');
         return;
     }
     

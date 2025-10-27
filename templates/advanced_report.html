@@ -1,0 +1,578 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}Advanced Reports{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .report-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    
+    .filters-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .report-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    
+    .tab-btn {
+        padding: 12px 20px;
+        border: none;
+        border-radius: 8px;
+        background: #f8fafc;
+        color: #4a5568;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    
+    .tab-btn.active {
+        background: #667eea;
+        color: white;
+    }
+    
+    .tab-btn:hover {
+        background: #edf2f7;
+        transform: translateY(-2px);
+    }
+    
+    .tab-btn.active:hover {
+        background: #5a67d8;
+    }
+    
+    .report-content {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        padding: 20px;
+        border-radius: 12px;
+        color: white;
+        text-align: center;
+    }
+    
+    .stat-card.blue { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .stat-card.green { background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); }
+    .stat-card.orange { background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%); }
+    .stat-card.red { background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%); }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 5px;
+    }
+    
+    .stat-label {
+        font-size: 1rem;
+        opacity: 0.9;
+    }
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .data-table th {
+        background: #f8fafc;
+        font-weight: 600;
+        color: #2d3748;
+    }
+    
+    .data-table tr:hover {
+        background: #f8fafc;
+    }
+    
+    .progress-bar {
+        width: 100%;
+        height: 20px;
+        background: #e2e8f0;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        transition: width 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .status-present { background: #c6f6d5; color: #22543d; }
+    .status-absent { background: #fed7d7; color: #742a2a; }
+    .status-late { background: #fbd38d; color: #7b341e; }
+    
+    @media (max-width: 768px) {
+        .report-container {
+            padding: 10px;
+        }
+        
+        .report-tabs {
+            flex-direction: column;
+        }
+        
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .data-table {
+            font-size: 0.9rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="report-container">
+    <!-- Filters -->
+    <div class="filters-card">
+        <h3 style="margin-bottom: 20px; color: #2d3748;">Filters & Options</h3>
+        
+        <form method="GET" id="reportForm">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Report Type:</label>
+                    <select name="report_type" class="form-select" onchange="document.getElementById('reportForm').submit()">
+                        <option value="overview" {% if report_type == 'overview' %}selected{% endif %}>Overview</option>
+                        <option value="student_details" {% if report_type == 'student_details' %}selected{% endif %}>Student Details</option>
+                        <option value="group_analysis" {% if report_type == 'group_analysis' %}selected{% endif %}>👥 Group Analysis</option>
+                        <option value="subject_performance" {% if report_type == 'subject_performance' %}selected{% endif %}>Subject Performance</option>
+                        <option value="teacher_report" {% if report_type == 'teacher_report' %}selected{% endif %}>Teacher Report</option>
+                        <option value="attendance_list" {% if report_type == 'attendance_list' %}selected{% endif %}>Attendance List</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <label class="form-label">Start Date:</label>
+                    <input type="date" name="start_date" class="form-control" value="{{ start_date }}" onchange="document.getElementById('reportForm').submit()">
+                </div>
+                
+                <div class="col-md-2">
+                    <label class="form-label">End Date:</label>
+                    <input type="date" name="end_date" class="form-control" value="{{ end_date }}" onchange="document.getElementById('reportForm').submit()">
+                </div>
+                
+                {% if report_type == 'student_details' %}
+                <div class="col-md-3">
+                    <label class="form-label">Select Student:</label>
+                    <select name="student_id" class="form-select" onchange="document.getElementById('reportForm').submit()">
+                        <option value="">Choose student...</option>
+                        {% for student in students %}
+                        <option value="{{ student.id }}" {% if request.GET.student_id == student.id|stringformat:"s" %}selected{% endif %}>
+                            {{ student.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+                
+                {% if report_type == 'group_analysis' %}
+                <div class="col-md-3">
+                    <label class="form-label">Select Group:</label>
+                    <select name="group_id" class="form-select" onchange="document.getElementById('reportForm').submit()">
+                        <option value="">Choose group...</option>
+                        {% for group in groups %}
+                        <option value="{{ group.id }}" {% if request.GET.group_id == group.id|stringformat:"s" %}selected{% endif %}>
+                            {{ group.name }} ({{ group.course.name }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+                
+                <div class="col-md-2">
+                    <label class="form-label">Action:</label>
+                    <button type="submit" class="btn btn-primary w-100">🔍 Apply Filters</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Report Content -->
+    {% if report_type == 'overview' %}
+        <!-- Overview Statistics -->
+        <div class="report-content">
+            
+            {% if status_statistics %}
+            <h4 style="margin-top: 30px; color: #2d3748;">Attendance Status Distribution</h4>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Count</th>
+                        <th>Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in status_statistics %}
+                    <tr>
+                        <td>
+                            <span class="status-badge status-{{ stat.status|lower }}">
+                                {{ stat.status }}
+                            </span>
+                        </td>
+                        <td>{{ stat.count }}</td>
+                        <td>
+                            {% widthratio stat.count total_attendances 100 %}%
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+            
+            {% if group_statistics %}
+            <h4 style="margin-top: 30px; color: #2d3748;">Group Performance</h4>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Group</th>
+                        <th>Total</th>
+                        <th>Present</th>
+                        <th>Absent</th>
+                        <th>Late</th>
+                        <th>Attendance Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in group_statistics %}
+                    <tr>
+                        <td><strong>{{ stat.student__group__name }}</strong></td>
+                        <td>{{ stat.total_attendances }}</td>
+                        <td class="text-success">{{ stat.present_count }}</td>
+                        <td class="text-danger">{{ stat.absent_count }}</td>
+                        <td class="text-warning">{{ stat.late_count }}</td>
+                        <td>
+                            {% if stat.total_attendances > 0 %}
+                                {% widthratio stat.present_count|add:stat.late_count stat.total_attendances 100 %}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+        
+    {% elif report_type == 'student_details' and selected_student %}
+        <!-- Student Details -->
+        <div class="report-content">
+            <h3 style="margin-bottom: 25px; color: #2d3748;">👤 {{ selected_student.name }} - Detailed Report</h3>
+            
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5>Student Information</h5>
+                            <p><strong>Name:</strong> {{ selected_student.name }}</p>
+                            <p><strong>Group:</strong> {{ selected_student.group.name }}</p>
+                            <p><strong>Course:</strong> {{ selected_student.course.name }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5>Attendance Statistics</h5>
+                            <p><strong>Total Records:</strong> {{ student_stats.total }}</p>
+                            <p><strong>Present:</strong> <span class="text-success">{{ student_stats.present }}</span></p>
+                            <p><strong>Absent:</strong> <span class="text-danger">{{ student_stats.absent }}</span></p>
+                            <p><strong>Late:</strong> <span class="text-warning">{{ student_stats.late }}</span></p>
+                            <p><strong>Attendance Rate:</strong> {{ student_stats.attendance_rate }}%</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if student_attendances %}
+            <h4 style="color: #2d3748;">Attendance History</h4>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Subject</th>
+                        <th>Teacher</th>
+                        <th>Status</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for attendance in student_attendances %}
+                    <tr>
+                        <td>{{ attendance.date }}</td>
+                        <td>{{ attendance.schedule.subject.subject_name }}</td>
+                        <td>{{ attendance.schedule.teacher.name }}</td>
+                        <td>
+                            <span class="status-badge status-{{ attendance.status|lower }}">
+                                {{ attendance.status }}
+                            </span>
+                        </td>
+                        <td>{{ attendance.marked_at|time:"H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+        
+    {% elif report_type == 'group_analysis' and selected_group %}
+        <!-- Group Analysis -->
+        <div class="report-content">
+            <h3 style="margin-bottom: 25px; color: #2d3748;">👥 {{ selected_group.name }} - Group Analysis</h3>
+            
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5>Group Information</h5>
+                            <p><strong>Group:</strong> {{ selected_group.name }}</p>
+                            <p><strong>Course:</strong> {{ selected_group.course.name }}</p>
+                            <p><strong>Total Students:</strong> {{ group_students.count }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if student_statistics %}
+            <h4 style="color: #2d3748;">Student Performance in Group</h4>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Total</th>
+                        <th>Present</th>
+                        <th>Absent</th>
+                        <th>Late</th>
+                        <th>Attendance Rate</th>
+                        <th>Performance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in student_statistics %}
+                    <tr>
+                        <td><strong>{{ stat.student.name }}</strong></td>
+                        <td>{{ stat.total }}</td>
+                        <td class="text-success">{{ stat.present }}</td>
+                        <td class="text-danger">{{ stat.absent }}</td>
+                        <td class="text-warning">{{ stat.late }}</td>
+                        <td>{{ stat.attendance_rate }}%</td>
+                        <td>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: {{ stat.attendance_rate }}%">
+                                    {{ stat.attendance_rate }}%
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+        
+    {% elif report_type == 'subject_performance' %}
+        <!-- Subject Performance -->
+        <div class="report-content">
+            <h3 style="margin-bottom: 25px; color: #2d3748;">📚 Subject Performance Analysis</h3>
+            
+            {% if subject_statistics %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>Teacher</th>
+                        <th>Total Records</th>
+                        <th>Present</th>
+                        <th>Absent</th>
+                        <th>Late</th>
+                        <th>Attendance Rate</th>
+                        <th>Performance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in subject_statistics %}
+                    <tr>
+                        <td><strong>{{ stat.subject.subject_name }}</strong></td>
+                        <td>{{ stat.subject.teacher.name }}</td>
+                        <td>{{ stat.total }}</td>
+                        <td class="text-success">{{ stat.present }}</td>
+                        <td class="text-danger">{{ stat.absent }}</td>
+                        <td class="text-warning">{{ stat.late }}</td>
+                        <td>{{ stat.attendance_rate }}%</td>
+                        <td>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: {{ stat.attendance_rate }}%">
+                                    {{ stat.attendance_rate }}%
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+        
+    {% elif report_type == 'teacher_report' %}
+        <!-- Teacher Report -->
+        <div class="report-content">
+            <h3 style="margin-bottom: 25px; color: #2d3748;">👨‍🏫 Teacher Performance Report</h3>
+            
+            {% if teacher_statistics %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Teacher</th>
+                        <th>Department</th>
+                        <th>Total Records</th>
+                        <th>Present</th>
+                        <th>Absent</th>
+                        <th>Late</th>
+                        <th>Attendance Rate</th>
+                        <th>Performance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in teacher_statistics %}
+                    <tr>
+                        <td><strong>{{ stat.teacher.name }}</strong></td>
+                        <td>{{ stat.teacher.department|default:"N/A" }}</td>
+                        <td>{{ stat.total }}</td>
+                        <td class="text-success">{{ stat.present }}</td>
+                        <td class="text-danger">{{ stat.absent }}</td>
+                        <td class="text-warning">{{ stat.late }}</td>
+                        <td>{{ stat.attendance_rate }}%</td>
+                        <td>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: {{ stat.attendance_rate }}%">
+                                    {{ stat.attendance_rate }}%
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+        
+    {% elif report_type == 'attendance_list' %}
+        <!-- Attendance List -->
+        <div class="report-content">
+            <h3 style="margin-bottom: 25px; color: #2d3748;">📋 Detailed Attendance Records</h3>
+            <p style="margin-bottom: 20px; color: #4a5568;">Total Records: <strong>{{ total_records }}</strong></p>
+            
+            {% if attendances %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Student</th>
+                        <th>Group</th>
+                        <th>Subject</th>
+                        <th>Teacher</th>
+                        <th>Status</th>
+                        <th>Marked At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for attendance in attendances %}
+                    <tr>
+                        <td>{{ attendance.date }}</td>
+                        <td><strong>{{ attendance.student.name }}</strong></td>
+                        <td>{{ attendance.student.group.name }}</td>
+                        <td>{{ attendance.schedule.subject.subject_name }}</td>
+                        <td>{{ attendance.schedule.teacher.name }}</td>
+                        <td>
+                            <span class="status-badge status-{{ attendance.status|lower }}">
+                                {{ attendance.status }}
+                            </span>
+                        </td>
+                        <td>{{ attendance.marked_at|time:"H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-submit form on filter changes
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('reportForm');
+    const selects = form.querySelectorAll('select');
+    const inputs = form.querySelectorAll('input[type="date"]');
+    
+    // Add event listeners
+    selects.forEach(select => {
+        select.addEventListener('change', function() {
+            form.submit();
+        });
+    });
+    
+    inputs.forEach(input => {
+        input.addEventListener('change', function() {
+            form.submit();
+        });
+    });
+});
+</script>
+{% endblock %}

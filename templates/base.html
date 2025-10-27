@@ -62,7 +62,7 @@
 
         .adaptive-logo {
             padding: 0 20px 30px;
-            border-bottom: 1px solid var(--nav-border);
+           
             margin-bottom: 20px;
         }
 
@@ -576,6 +576,11 @@
                 <i class="fas fa-cogs"></i>
                 <span>{% trans "Management" %}</span>
             </a>
+            
+            <a href="{% url 'advanced_report' %}" class="adaptive-menu-item {% if request.resolver_match.url_name == 'advanced_report' %}active{% endif %}">
+                <i class="fas fa-chart-bar"></i>
+                <span>{% trans "Reports" %}</span>
+            </a>
             {% endif %}
             
             
@@ -636,6 +641,13 @@
             <i class="fas fa-calendar-week"></i>
             <span>{% trans "Schedule" %}</span>
         </a>
+        
+        {% if user.userprofile.role == 'MANAGER' or user.userprofile.role == 'ADMIN' %}
+        <a href="{% url 'advanced_report' %}" class="adaptive-bottom-item {% if request.resolver_match.url_name == 'advanced_report' %}active{% endif %}">
+            <i class="fas fa-chart-bar"></i>
+            <span>{% trans "Reports" %}</span>
+        </a>
+        {% endif %}
         
         <a href="{% url 'profile_view' %}" class="adaptive-bottom-item {% if request.resolver_match.url_name == 'profile_view' %}active{% endif %}">
             <i class="fas fa-user"></i>

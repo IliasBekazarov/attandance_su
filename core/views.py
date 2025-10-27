@@ -1351,7 +1351,7 @@ def report(request):
         'group_id': group_id,
     }
     
-    return render(request, 'report.html', context)
+    return render(request, 'report_new.html', context)
 
 def export_detailed_pdf(attendances, stats):
     """Детальный PDF отчет с статистикой"""
@@ -2365,3 +2365,244 @@ def mark_student_attendance(request, schedule_id):
         
     except Exception as e:
         return JsonResponse({'error': f'Error marking attendance: {str(e)}'}, status=500)
+
+
+@login_required
+@user_passes_test(is_admin_or_manager)
+def advanced_report(request):
+    """Админ жана менеджер үчүн кеңири отчет системасы"""
+    from django.utils import timezone
+    from datetime import datetime, timedelta
+    from django.db.models import Count, Q, Avg
+    from django.http import JsonResponse
+    import json
+    
+    context = {}
+    
+    # Фильтрлер
+    report_type = request.GET.get('report_type', 'overview')
+    student_id = request.GET.get('student_id')
+    group_id = request.GET.get('group_id')
+    course_id = request.GET.get('course_id')
+    subject_id = request.GET.get('subject_id')
+    teacher_id = request.GET.get('teacher_id')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    status_filter = request.GET.get('status_filter')  # Present, Absent, Late
+    
+    # Дата анализи
+    today = timezone.now().date()
+    if not start_date:
+        start_date = (today - timedelta(days=30)).strftime('%Y-%m-%d')
+    if not end_date:
+        end_date = today.strftime('%Y-%m-%d')
+    
+    try:
+        parsed_start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        parsed_end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+    except ValueError:
+        parsed_start_date = today - timedelta(days=30)
+        parsed_end_date = today
+    
+    # Базалык данныйлар
+    context.update({
+        'courses': Course.objects.all().order_by('year', 'name'),
+        'groups': Group.objects.all().order_by('course__year', 'name'),
+        'subjects': Subject.objects.all().order_by('subject_name'),
+        'teachers': Teacher.objects.all().order_by('name'),
+        'students': Student.objects.all().order_by('name'),
+        'start_date': start_date,
+        'end_date': end_date,
+        'report_type': report_type,
+    })
+    
+    # Attendance базалык filter
+    attendance_filter = Q(date__range=[parsed_start_date, parsed_end_date])
+    
+    if student_id:
+        attendance_filter &= Q(student_id=student_id)
+    if group_id:
+        attendance_filter &= Q(student__group_id=group_id)
+    if course_id:
+        attendance_filter &= Q(student__course_id=course_id)
+    if subject_id:
+        attendance_filter &= Q(schedule__subject_id=subject_id)
+    if teacher_id:
+        attendance_filter &= Q(schedule__teacher_id=teacher_id)
+    if status_filter:
+        attendance_filter &= Q(status=status_filter)
+    
+    # Отчет түрүнө жараша данныйлар
+    if report_type == 'overview':
+        # Жалпы көз караш
+        context.update({
+            'total_students': Student.objects.count(),
+            'total_courses': Course.objects.count(),
+            'total_groups': Group.objects.count(),
+            'total_subjects': Subject.objects.count(),
+            'total_attendances': Attendance.objects.filter(attendance_filter).count(),
+        })
+        
+        # Статустар боюнча статистика
+        status_stats = Attendance.objects.filter(attendance_filter).values('status').annotate(
+            count=Count('id')
+        ).order_by('status')
+        
+        context['status_statistics'] = list(status_stats)
+        
+        # Группалар боюнча статистика
+        group_stats = Attendance.objects.filter(attendance_filter).values(
+            'student__group__name', 'student__group__id'
+        ).annotate(
+            total_attendances=Count('id'),
+            present_count=Count('id', filter=Q(status='Present')),
+            absent_count=Count('id', filter=Q(status='Absent')),
+            late_count=Count('id', filter=Q(status='Late'))
+        ).order_by('student__group__name')
+        
+        context['group_statistics'] = list(group_stats)
+        
+    elif report_type == 'student_details':
+        # Студенттердин детальный отчету
+        if student_id:
+            student = Student.objects.get(id=student_id)
+            context['selected_student'] = student
+            
+            # Студенттин attendance тарыхы
+            student_attendances = Attendance.objects.filter(
+                attendance_filter, student=student
+            ).select_related('schedule__subject', 'schedule__teacher').order_by('-date')
+            
+            context['student_attendances'] = student_attendances
+            
+            # Студенттин статистикасы
+            student_stats = {
+                'total': student_attendances.count(),
+                'present': student_attendances.filter(status='Present').count(),
+                'absent': student_attendances.filter(status='Absent').count(),
+                'late': student_attendances.filter(status='Late').count(),
+            }
+            
+            if student_stats['total'] > 0:
+                student_stats['attendance_rate'] = round(
+                    (student_stats['present'] + student_stats['late']) / student_stats['total'] * 100, 2
+                )
+            else:
+                student_stats['attendance_rate'] = 0
+                
+            context['student_stats'] = student_stats
+            
+    elif report_type == 'group_analysis':
+        # Группалардын анализи
+        if group_id:
+            group = Group.objects.get(id=group_id)
+            context['selected_group'] = group
+            
+            # Группанын студенттери
+            group_students = Student.objects.filter(group=group)
+            context['group_students'] = group_students
+            
+            # Ар бир студенттин статистикасы
+            student_stats = []
+            for student in group_students:
+                student_attendances = Attendance.objects.filter(
+                    attendance_filter, student=student
+                )
+                
+                stats = {
+                    'student': student,
+                    'total': student_attendances.count(),
+                    'present': student_attendances.filter(status='Present').count(),
+                    'absent': student_attendances.filter(status='Absent').count(),
+                    'late': student_attendances.filter(status='Late').count(),
+                }
+                
+                if stats['total'] > 0:
+                    stats['attendance_rate'] = round(
+                        (stats['present'] + stats['late']) / stats['total'] * 100, 2
+                    )
+                else:
+                    stats['attendance_rate'] = 0
+                    
+                student_stats.append(stats)
+            
+            context['student_statistics'] = student_stats
+            
+    elif report_type == 'subject_performance':
+        # Сабактар боюнча анализ
+        subject_stats = []
+        subjects = Subject.objects.all()
+        
+        for subject in subjects:
+            subject_attendances = Attendance.objects.filter(
+                attendance_filter, schedule__subject=subject
+            )
+            
+            stats = {
+                'subject': subject,
+                'total': subject_attendances.count(),
+                'present': subject_attendances.filter(status='Present').count(),
+                'absent': subject_attendances.filter(status='Absent').count(),
+                'late': subject_attendances.filter(status='Late').count(),
+            }
+            
+            if stats['total'] > 0:
+                stats['attendance_rate'] = round(
+                    (stats['present'] + stats['late']) / stats['total'] * 100, 2
+                )
+            else:
+                stats['attendance_rate'] = 0
+                
+            if stats['total'] > 0:  # Эгерде attendance болсо гана кошабыз
+                subject_stats.append(stats)
+        
+        # Attendance rate боюнча иретке салуу
+        subject_stats.sort(key=lambda x: x['attendance_rate'], reverse=True)
+        context['subject_statistics'] = subject_stats
+        
+    elif report_type == 'teacher_report':
+        # Мугалимдер боюнча отчет
+        teacher_stats = []
+        teachers = Teacher.objects.all()
+        
+        for teacher in teachers:
+            teacher_attendances = Attendance.objects.filter(
+                attendance_filter, schedule__teacher=teacher
+            )
+            
+            stats = {
+                'teacher': teacher,
+                'total': teacher_attendances.count(),
+                'present': teacher_attendances.filter(status='Present').count(),
+                'absent': teacher_attendances.filter(status='Absent').count(),
+                'late': teacher_attendances.filter(status='Late').count(),
+            }
+            
+            if stats['total'] > 0:
+                stats['attendance_rate'] = round(
+                    (stats['present'] + stats['late']) / stats['total'] * 100, 2
+                )
+            else:
+                stats['attendance_rate'] = 0
+                
+            if stats['total'] > 0:
+                teacher_stats.append(stats)
+        
+        teacher_stats.sort(key=lambda x: x['attendance_rate'], reverse=True)
+        context['teacher_statistics'] = teacher_stats
+        
+    elif report_type == 'attendance_list':
+        # Детальный attendance тизмеси
+        attendances = Attendance.objects.filter(attendance_filter).select_related(
+            'student', 'student__group', 'student__course', 
+            'schedule__subject', 'schedule__teacher'
+        ).order_by('-date', 'student__name')
+        
+        context['attendances'] = attendances
+        context['total_records'] = attendances.count()
+    
+    # AJAX request болсо JSON кайтарабыз
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse(context, safe=False)
+    
+    return render(request, 'advanced_report.html', context)

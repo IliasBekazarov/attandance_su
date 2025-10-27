@@ -9,16 +9,17 @@ urlpatterns = [
     path('dashboard/', views.dashboard, name='dashboard'),
     path('modern-dashboard/', views.modern_dashboard, name='modern_dashboard'),
     path('settings/', views.settings, name='settings'),
-    path('schedule/', views.schedule, name='schedule'),
+    # path('schedule/', views.schedule, name='schedule'),  # DEPRECATED: use unified_schedule
     path('report/', views.report, name='report'),
+    path('advanced-report/', views.advanced_report, name='advanced_report'),
     path('export/pdf/', views.export_pdf, name='export_pdf'),
     path('export/excel/', views.export_excel, name='export_excel'),
     path('logout/', views.user_logout, name='logout'),
     path('send-notification/', views.send_notification, name='send_notification'),
-    path('schedule/edit/', views.schedule_edit, name='schedule_edit'),
-    path('schedule/update/', views.schedule_update, name='schedule_update'),
-    path('schedule/student/', views.student_schedule, name='student_schedule'),
-    path('schedule/teacher/', views.teacher_schedule, name='teacher_schedule'),
+    # path('schedule/edit/', views.schedule_edit, name='schedule_edit'),  # DEPRECATED
+    # path('schedule/update/', views.schedule_update, name='schedule_update'),  # DEPRECATED
+    # path('schedule/student/', views.student_schedule, name='student_schedule'),  # DEPRECATED
+    # path('schedule/teacher/', views.teacher_schedule, name='teacher_schedule'),  # DEPRECATED
     path('teacher/attendance/', views.teacher_attendance, name='teacher_attendance'),
     path('schedule/mark/<int:schedule_id>/', views.mark_group_attendance, name='mark_group_attendance'),
     path('notification/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
@@ -61,11 +62,11 @@ urlpatterns = [
     # Сабактар башкаруу
     path('manage-subjects/', views.manage_subjects, name='manage_subjects'),
     
-    # Жумалык расписание
-    path('weekly-schedule/', views.weekly_schedule, name='weekly_schedule'),
+    # Жумалык расписание (DEPRECATED)
+    # path('weekly-schedule/', views.weekly_schedule, name='weekly_schedule'),
     
-    # Универсалдуу расписание
-    path('universal-schedule/', views.universal_schedule, name='universal_schedule'),
+    # Универсалдуу расписание (DEPRECATED)
+    # path('universal-schedule/', views.universal_schedule, name='universal_schedule'),
     
     # Студенттик катышуу белгилөө
     path('student/attendance/mark/<int:schedule_id>/', views.mark_student_attendance, name='mark_student_attendance'),
